@@ -1,0 +1,107 @@
+import torch.nn 
+import torch.optim as optim
+from models.lenet import *
+from models.lenet import LeNet5
+from torch.utils.data import DataLoader
+import logging
+import os
+from globalUtils import *
+import globalUtils
+
+class ModelTraining:
+    
+    def __init__(self, workerId, trainConfig, trainData,testData,activeWorkersId=None,logger=None,stdoutFlag=True):
+        self.workerId         = workerId
+        self.trainConfig      = trainConfig
+        #self.workerDataIdxMap = workerDataIdxMap
+        self.trainData        = trainData
+        self.testData         = testData
+        self.activeWorkersId  = activeWorkersId
+        self.device           = trainConfig['device']
+        
+        self.model,self.criterion        = createModel(trainConfig)
+        
+        if('modelPath' in self.trainConfig):
+            print('loading model from file')
+            self.model.load_state_dict(torch.load(self.trainConfig['modelPath']))
+        
+        self.trainLoader,self.testLoader = self.createDataLoaders(trainData,testData,trainConfig['batchSize'])
+
+        
+        self.optim            = optim.Adam(self.model.parameters(),
+                                          lr=trainConfig['initLr'],
+                                          #momentum=trainConfig['momentum'],
+                                          weight_decay=trainConfig['weightDecay'])
+
+        self.lr = trainConfig['initLr']
+        if(logger is None): 
+            self.logger = globalUtils.getLogger("worker_{}.log".format(workerId), stdoutFlag, logging.INFO)
+        else:
+            self.logger = logger
+        
+        
+    def createDataLoaders(self,trainData,testData,batchSize):
+        trainLoader = DataLoader(trainData, batch_size=batchSize, shuffle=True, num_workers=1)
+        testLoader  = DataLoader(testData, batch_size=batchSize, num_workers=1)
+        return trainLoader,testLoader
+          
+    def trainOneEpoch(self,epoch):
+        self.model.train()
+        for batchIdx, (data, target) in enumerate(self.trainLoader):
+            data, target = data.to(self.device), target.to(self.device)
+            self.optim.zero_grad()   # set gradient to 0
+            output       = self.model(data)
+            loss         = self.criterion(output, target)
+            loss.backward()    # compute gradient
+            
+            if batchIdx%20 == 0:
+                self.logger.info('Worker: {} Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(self.workerId,
+                                epoch, batchIdx * len(data), len(self.trainLoader.dataset),
+                                100. * batchIdx / len(self.trainLoader), loss.item()))
+            self.optim.step()
+            
+        #self.model.eval()
+        #self.logger.info("Accuracy of model {}".format(self.workerId))
+        #currTestLoss, curTestAcc = self.validateModel()
+        #return currTestLoss, curTestAcc
+        #lss,acc_bf_scale = self.validate_model(logger)
+        return 0,0
+     
+    def trainNEpochs(self,n):
+        lstTestLosses  = []
+        lstTestAcc     = []
+        #lstTrainLosses = []
+        #lstTrainAcc    = []
+        for i in range(n):
+            a,b = self.trainOneEpoch(i) 
+            lstTestLosses.append(a)
+            lstTestAcc.append(b)
+            
+        return lstTestLosses, lstTestAcc
+    
+    def validateModel(self,model=None,dataLoader=None):
+        if(model is None):
+            model = self.model
+        if(dataLoader is None):
+            dataLoader = self.testLoader
+            
+        model.eval()
+        testLoss = 0 
+        correct = 0 
+        with torch.no_grad():
+            for batchIdx, (data, target) in enumerate(dataLoader):
+                data, target = data.to(self.device), target.to(self.device)
+                output       = model(data)
+                testLoss    += self.criterion(output, target).item()
+                pred         = output.max(1, keepdim=True)[1]
+                correct     += pred.eq(target.view_as(pred)).sum().item()
+        
+        testLoss /= len(dataLoader)
+        testAcc   =  100. * correct / len(dataLoader.dataset)
+        self.logger.info('Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+                            testLoss, correct, len(dataLoader.dataset), testAcc))
+        return testLoss, testAcc 
+    
+    #def trainOneAdversarialEpoch(self):
+        
+        
