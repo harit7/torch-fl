@@ -31,7 +31,7 @@ femnistConfig = {
     "loss":"crossEntropy",
     "device": "cpu",#"cuda:1",
     "data_path": "../../data/leaf-data/femnist/",
-    "batchSize": 5,
+    "batchSize": 64,
     "test_batch_size": 128,
     "initLr" : 0.002,
     "momentum": 0.9,
@@ -61,9 +61,9 @@ def normalTest():
     lstParts = partitioner.iidParts(mnistData.trainData, 300)
     '''
     femnistData = FEMNISTData(femnistConfig['data_path'])
-    femnistData.loadData(testFraction=0.1)
+    femnistData.loadData(testFraction=0.2)
     print("size of test data {}".format(len(femnistData.testData)))
-    workers = np.random.permutation(femnistData.usersList)[:15]
+    workers = np.random.permutation(femnistData.usersList)[:4]
     print(workers)
     lstModels = []
     lstPtsCount = []
@@ -98,11 +98,11 @@ def normalTest():
     
     
     avgMdl = ModelTraining(workerId,femnistConfig,trainData_,femnistData.testData,logger=logger)
-    for e in range(5):
+    for e in range(50):
         print('epoch: {} '.format(e))
         for mdl in lstModels:
             
-            mdl.trainNEpochs(1)
+            mdl.trainNEpochs(2)
             testLoss, testAcc = mdl.validateModel() 
             print(testLoss,testAcc)
             
@@ -114,12 +114,76 @@ def normalTest():
         print('------------')
        
     
- 
+def normalTest2():
+    workerId = 0
+    logger = getLogger("worker_{}.log".format(workerId), False, logging.INFO)
+    '''
+    mnistData = loadDataset("mnist")
+    partitioner = Partition()
+    lstParts = partitioner.iidParts(mnistData.trainData, 300)
+    '''
+    femnistData = FEMNISTData(femnistConfig['data_path'])
+    femnistData.loadData(testFraction=0.2)
+    print("size of test data {}".format(len(femnistData.testData)))
+   
+    '''
+    lstModels[0].trainNEpochs(5)
+    lstModels[0].validateModel()
+    lstModels[1].trainNEpochs(5)
+    lstModels[1].validateModel()
+    print(list(lstModels[0].model.parameters())[0][0])
+    print(list(lstModels[1].model.parameters())[0][0])
+    
+    avgMdl = ModelTraining(workerId,femnistConfig,trainData_,femnistData.testData)
+    avgMdl.validateModel()
+    setParamsToZero(avgMdl.model) 
+    addModelsInPlace(avgMdl.model, lstModels[0].model, scale2=0.5)
+    avgMdl.validateModel()
+    print(list(avgMdl.model.parameters())[0][0])
+    
+    addModelsInPlace(avgMdl.model, lstModels[1].model, scale2=0.5)
+    avgMdl.validateModel()
+    print(list(avgMdl.model.parameters())[0][0])
+    '''
+    
+    trainData_ = femnistData.getTrainDataForUser(0)
+    avgMdl = ModelTraining(workerId,femnistConfig,trainData_,femnistData.testData,logger=logger)
+    
+    for e in range(50):
+        workers = np.random.permutation(femnistData.usersList)[:4]
+        print(workers)
+        lstModels = []
+        lstPtsCount = []
+        for workerId in workers:
+            trainData_ = femnistData.getTrainDataForUser(workerId)
+            wt = ModelTraining(workerId,femnistConfig,trainData_,femnistData.testData,logger=logger)
+            lstModels.append(wt)
+            lstPtsCount.append(len(trainData_))
+        
+        lstFractionPts = np.array(lstPtsCount) 
+        lstFractionPts = lstFractionPts/sum(lstFractionPts)   
+        print(lstFractionPts)
+        print('epoch: {} '.format(e))
+        for mdl in lstModels:
+            copyParams(avgMdl.model, mdl.model)
+            mdl.trainNEpochs(2)
+            testLoss, testAcc = mdl.validateModel() 
+            print(testLoss,testAcc)
+            
+        avgMdl.model = fedAvg(lstModels, lstFractionPts, femnistConfig)
+        print('Acc of Avg Model')
+        testLoss, testAcc = avgMdl.validateModel()
+        print(testLoss,testAcc)
+        
+        print('------------')
        
+        
+     
+           
 if __name__ == "__main__":
     #args = add_fit_args(argparse.ArgumentParser(description="Federated Setup"))
     seed(42)
-    normalTest()
+    normalTest2()
     
     # seed(args.seed)
     #print(args)

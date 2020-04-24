@@ -7,6 +7,7 @@ import numpy as np
 import os
 import torch
 from models.lenet import LeNet5
+import copy
 
 def getLogger(logFile,stdoutRedirect=False,level=logging.INFO):
     #log_file_name = os.path.basename(args.log_file).split(".")[0]+".log"
@@ -71,7 +72,7 @@ def copyParams(mdl1,mdl2):
     W2  = list(mdl2.parameters())
     assert len(W1) == len(W2)
     for i in range(len(W1)):
-        W2[i].data = W1[i].data
+        W2[i].data = copy.deepcopy(W1[i].data)
     
 def addModels(mdl1, mdl2,scale1=1.0,scale2=1.0):
     cls = mdl1.__class__
