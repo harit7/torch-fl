@@ -10,6 +10,7 @@ from partitioner import *
 from dataset.femnist import FEMNISTData
 from _pylief import NONE
 import pickle
+from torch.utils import data
 
 mnistConfig = {
     "name": "Mnist",
@@ -20,7 +21,7 @@ mnistConfig = {
     "data_path": "./data/mnist",
     "batchSize": 128,
     "test_batch_size": 128,
-    "initLr" : 0.01,
+    "initLr" : 1.0,
     "momentum": 0.9,
     "weightDecay": 0.0001,
     #"modelPath": "../../checkpoints/lenet_mnist_till_epoch_5.ckpt", # saved model to run one
@@ -53,89 +54,82 @@ def fedAvg(lstModels, lstFractionPts, config):
         W = list(mdlAvg.parameters())[0][0]
         #print(W)
     return mdlAvg
-    
-def normalTest():
-    workerId = 0
-    logger = getLogger("worker_{}.log".format(workerId), False, logging.INFO)
-    '''
-    mnistData = loadDataset("mnist")
-    partitioner = Partition()
-    lstParts = partitioner.iidParts(mnistData.trainData, 300)
-    '''
-    femnistData = FEMNISTData(femnistConfig['data_path'])
-    femnistData.loadData(testFraction=0.2)
-    print("size of test data {}".format(len(femnistData.testData)))
-    workers = np.random.permutation(femnistData.usersList)[:4]
-    print(workers)
-    lstModels = []
-    lstPtsCount = []
-    for workerId in workers:
-        trainData_ = femnistData.getTrainDataForUser(workerId)
-        wt = ModelTraining(workerId,femnistConfig,trainData_,femnistData.testData,logger=logger)
-        lstModels.append(wt)
-        lstPtsCount.append(len(trainData_))
-    
-    lstFractionPts = np.array(lstPtsCount) 
-    lstFractionPts = lstFractionPts/sum(lstFractionPts)   
-    print(lstFractionPts)
-    '''
-    lstModels[0].trainNEpochs(5)
-    lstModels[0].validateModel()
-    lstModels[1].trainNEpochs(5)
-    lstModels[1].validateModel()
-    print(list(lstModels[0].model.parameters())[0][0])
-    print(list(lstModels[1].model.parameters())[0][0])
-    
-    avgMdl = ModelTraining(workerId,femnistConfig,trainData_,femnistData.testData)
-    avgMdl.validateModel()
-    setParamsToZero(avgMdl.model) 
-    addModelsInPlace(avgMdl.model, lstModels[0].model, scale2=0.5)
-    avgMdl.validateModel()
-    print(list(avgMdl.model.parameters())[0][0])
-    
-    addModelsInPlace(avgMdl.model, lstModels[1].model, scale2=0.5)
-    avgMdl.validateModel()
-    print(list(avgMdl.model.parameters())[0][0])
-    '''
-    
-    
-    avgMdl = ModelTraining(workerId,femnistConfig,trainData_,femnistData.testData,logger=logger)
-    for e in range(50):
-        print('epoch: {} '.format(e))
-        for mdl in lstModels:
-            
-            mdl.trainNEpochs(2)
-            testLoss, testAcc = mdl.validateModel() 
-            print(testLoss,testAcc)
-            
-        avgMdl.model = fedAvg(lstModels, lstFractionPts, femnistConfig)
-        print('Acc of Avg Model')
-        testLoss, testAcc = avgMdl.validateModel()
-        print(testLoss,testAcc)
-        copyParams(avgMdl.model, mdl.model)
-        print('------------')
-       
+
+
+def toBackdoorData(trainData):
+    labels = np.array([d[1].item() for d in trainData])
+    print(labels)
+    idx = np.arange(len(labels))
+    lstY = []
+    lstX = []
+    idx = []
+    i = 0
+    for x,y in trainData:
+        y  = y.item()
+        if(y==7):
+            lstY.append(1)
+            idx.append(i)
+        elif(y==1):
+            lstY.append(7)
+            idx.append(i)
+        else:
+            lstY.append(y)
+        lstX.append(x.numpy())
+        i+=1
+    print(idx)       
+    X = torch.tensor(lstX)
+    Y = torch.tensor(lstY)
+    badDataset = data.TensorDataset(X,Y)
+    lstX2 = torch.tensor([lstX[i] for i in idx])
+    lstY2 = torch.tensor([lstY[i] for i in idx])
+    backdoorData = data.TensorDataset(lstX2,lstY2)
+    return badDataset, backdoorData
+
     
 def normalTest2():
     workerId = 0
-    numWorkers = 30
+    numWorkers = 5
     fedEpochs  = 50
+
+
     logger = getLogger("worker_{}.log".format(workerId), False, logging.INFO)
     
     femnistData = FEMNISTData(femnistConfig['data_path'])
     femnistData.loadData(testFraction=1.0)
     print("size of test data {}".format(len(femnistData.testData)))
    
-    trainData_ = femnistData.getTrainDataForUser(0)
-    avgMdl = ModelTraining(workerId,femnistConfig,trainData_,femnistData.testData,logger=logger)
+    trainData0 = femnistData.getTrainDataForUser(0)
+    
+    badTrainData, backdoorData = toBackdoorData(trainData0)
+    bkdrDataLoader =  DataLoader(backdoorData, batch_size=8, num_workers=1)
+
+    worker0 =  ModelTraining(0,femnistConfig,badTrainData,femnistData.testData,logger=logger)
+    #worker0.trainNEpochs(20)
+    #oo =  worker0.validateModel(dataLoader=bkdrDataLoader)
+    #print('worker 0 bkdr, ',oo)
+    
+    avgMdl = ModelTraining(workerId,femnistConfig,trainData0,femnistData.testData,logger=logger)
     lstTestAcc = []
     lstTestLoss = []
+    lstBkdrAcc = []
     
+    #attackEpochs = [0,4,10,25,30,35,50]
+    attackEpochs = range(5,50)#[5,10,15]
     for e in range(fedEpochs):
-        workers = np.random.permutation(femnistData.usersList)[:numWorkers]
-        print(workers)
+        print('epoch: {} '.format(e))
+        workers = np.random.permutation(femnistData.usersList)[:numWorkers-1]
+        #print(workers)
         lstModels = []
         lstPtsCount = []
+        if(e in attackEpochs):
+            #copyParams(avgMdl.model,worker0.model)
+            #worker0.trainNEpochs(20)
+            #oo =  worker0.validateModel(dataLoader=bkdrDataLoader)
+            #print('worker 0 bkdr, ',oo)
+
+            lstModels.append(worker0)
+            lstPtsCount.append(len(trainData0))
+            
         for workerId in workers:
             trainData_ = femnistData.getTrainDataForUser(workerId)
             wt = ModelTraining(workerId,femnistConfig,trainData_,femnistData.testData,logger=logger)
@@ -144,28 +138,50 @@ def normalTest2():
         
         lstFractionPts = np.array(lstPtsCount) 
         lstFractionPts = lstFractionPts/sum(lstFractionPts)   
-        print(lstFractionPts)
-        print('epoch: {} '.format(e))
+        #print(lstFractionPts)
+        #print('epoch: {} '.format(e))
         i= 0
+        # self.trainLoader
+        #lstModels[0].trainLoader = bkdrDataLoader #badTrainData
+        
         for mdl in lstModels:
             copyParams(avgMdl.model, mdl.model)
-            mdl.trainNEpochs(1)
-            #testLoss, testAcc = mdl.validateModel() 
-            #print(testLoss,testAcc)
-            print(i)
+            #if i==0:
+                
+            #    mdl.trainNEpochs(10)
+
+            #else:
+            #print('workerId',mdl.workerId)
+
+            if(mdl.workerId!=0):
+                mdl.trainNEpochs(5)
+            else:
+                mdl.trainNEpochs(5)
+                testLoss, testAcc = mdl.validateModel(dataLoader=bkdrDataLoader) 
+                print('acc of adv on bkdr data',testLoss,testAcc)
+            #print(i)
+
+            #if(i==0):
+             #   a,b = mdl.validateModel(dataLoader=bkdrDataLoader)
+             #   print(a,b,'bkdr')
             i+=1
-            
+        print(len(lstModels))            
         avgMdl.model = fedAvg(lstModels, lstFractionPts, femnistConfig)
         print('Acc of Avg Model')
         testLoss, testAcc = avgMdl.validateModel()
         lstTestAcc.append(testAcc)
         lstTestLoss.append(testLoss)
         print(testLoss,testAcc)
+        testLoss,testAccBkdr = avgMdl.validateModel(dataLoader=bkdrDataLoader)
+        print('testAccBkdr of avg mdl',testAccBkdr)
+        lstBkdrAcc.append(testAccBkdr)
+        #accBkdrMdl = lstModels[0].validateModel(dataLoader=bkdrDataLoader)
+        #print(accBkdrMdl)
         if(e%5==0):
-            torch.save(avgMdl.model.state_dict(), '../checkpoints/avgModel.pkl')       
+            torch.save(avgMdl.model.state_dict(), '../checkpoints/avgModel_bkdr.pkl')       
         print('------------')
-    o = {"loss":lstTestLoss,"acc":lstTestAcc}
-    pickle.dump(o,open('out.pkl','wb'))
+    o = {"loss":lstTestLoss,"acc":lstTestAcc,'bkdrAcc':lstBkdrAcc}
+    pickle.dump(o,open('out_bkdr.pkl','wb'))
         
      
            
