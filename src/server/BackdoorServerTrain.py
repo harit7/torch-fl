@@ -12,21 +12,6 @@ from _pylief import NONE
 import pickle
 from torch.utils import data
 
-mnistConfig = {
-    "name": "Mnist",
-    "dataset": "mnist",
-    "arch": "lenet5",
-    "loss":"crossEntropy",
-    "device": "cpu",#"cuda:1",
-    "data_path": "./data/mnist",
-    "batchSize": 128,
-    "test_batch_size": 128,
-    "initLr" : 1.0,
-    "momentum": 0.9,
-    "weightDecay": 0.0001,
-    #"modelPath": "../../checkpoints/lenet_mnist_till_epoch_5.ckpt", # saved model to run one
-    "attackConfig":{"eta":0.01, "eps":0.003, "updateType":"epsBall","normType":"l_infty"}
-}
 femnistConfig = {
     "name": "femnist",
     "dataset": "femmnist",
@@ -89,6 +74,9 @@ def toBackdoorData(trainData):
 def normalTest2():
     workerId = 0
     numWorkers = 5
+    numAttackers = 2
+    attackers = [0,1]
+    fixedAttackers = True
     fedEpochs  = 50
 
 
@@ -99,11 +87,9 @@ def normalTest2():
     print("size of test data {}".format(len(femnistData.testData)))
    
     trainData0 = femnistData.getTrainDataForUser(0)
-    
-    badTrainData, backdoorData = toBackdoorData(trainData0)
-    bkdrDataLoader =  DataLoader(backdoorData, batch_size=8, num_workers=1)
+  
 
-    worker0 =  ModelTraining(0,femnistConfig,badTrainData,femnistData.testData,logger=logger)
+    #worker0 =  ModelTraining(0,femnistConfig,badTrainData,femnistData.testData,logger=logger)
     #worker0.trainNEpochs(20)
     #oo =  worker0.validateModel(dataLoader=bkdrDataLoader)
     #print('worker 0 bkdr, ',oo)
@@ -115,9 +101,14 @@ def normalTest2():
     
     #attackEpochs = [0,4,10,25,30,35,50]
     attackEpochs = range(5,50)#[5,10,15]
+    
     for e in range(fedEpochs):
         print('epoch: {} '.format(e))
-        workers = np.random.permutation(femnistData.usersList)[:numWorkers-1]
+        workers = np.random.permutation(femnistData.usersList)[numWorkers]
+        if(fixedAttackers):
+            workers = attackers + workers[:numWorkers-len(attackers)]
+        else:
+            attackers = 
         #print(workers)
         lstModels = []
         lstPtsCount = []
@@ -186,10 +177,7 @@ def normalTest2():
      
            
 if __name__ == "__main__":
-    #args = add_fit_args(argparse.ArgumentParser(description="Federated Setup"))
+
     seed(42)
     normalTest2()
-    
-    # seed(args.seed)
-    #print(args)
-    
+

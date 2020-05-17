@@ -7,6 +7,7 @@ import numpy as np
 import os
 import torch
 from models.lenet import LeNet5
+from models.textClassification import TextClassificationModel
 import copy
 
 def getLogger(logFile,stdoutRedirect=False,level=logging.INFO):
@@ -50,16 +51,26 @@ def printStats_(mdl):
     print(torch.mean(v),torch.std(v))
 
 def createModel(config):
-        model = None
-        arch = config['arch']
-        lossType = config['loss']
-        if(arch=='lenet5'):
-            model = LeNet5()
-        
-        if(lossType == 'crossEntropy'):
-            criterion = torch.nn.CrossEntropyLoss().to(config['device'])
-        model.to(config['device'])
-        return model,criterion
+    model = None
+    arch = config['arch']
+    lossType = config['loss']
+    if(arch=='lenet5'):
+        model = LeNet5()
+    
+    if(lossType == 'crossEntropy'):
+        criterion = torch.nn.CrossEntropyLoss().to(config['device'])
+    
+    if(arch=='rnn'):
+        model = models.RNNModel(config["model"], config["ntokens"], config["emsize"],
+                                       config["nhid"], config["nlayers"], config["dropout"], config["tied"])
+    if(lossType == 'crossEntropy'):
+        criterion = torch.nn.NLLLoss().to(config['device'])
+    if(arch=='rnnTextClassification'):
+        model = TextClassificationModel(config["modelParams"])
+        criterion = None
+
+    model.to(config['device'])
+    return model,criterion
        
 def loadModel(path,config):
     model,crit = createModel(config) 
