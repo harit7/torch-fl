@@ -1,4 +1,5 @@
-
+import sys
+sys.path.append('../')
 from globalUtils import *
 from training.textClassificationTraining import ModelTraining
 from dataset.datasets import loadDataset
@@ -27,9 +28,9 @@ reviewsConfig = {
     "dataset": "reviews",
     "arch": "rnnTextClassification",
     "loss":"nll",
-    "device": "cpu",#"cuda:1",
+    "device": "cuda:0",
     "dataPath": "../../data/reviews-data/",
-    "modelParams":{"vocabSize":0,"embeddingDim":100,"hiddenDim":100,
+    "modelParams":{"vocabSize":0,"embeddingDim":400,"hiddenDim":256,
                    "outputDim":1,"numLayers":2,"bidirectional":True,
                    "padIdx":0,"dropout":0.5},
     
@@ -51,9 +52,9 @@ if __name__ == "__main__":
     #wt.trainNEpochs(5)
     reviewDataset = reviewsData.ReviewData(reviewsConfig['dataPath'])
     reviewDataset.buildDataset()
-    reviewsConfig['modelParams']['vocabSize'] = reviewDataset.vocabSize 
+    reviewsConfig['modelParams']['vocabSize'] = reviewDataset.vocabSize +1 
     wt = ModelTraining(workerId,reviewsConfig,reviewDataset.trainData,reviewDataset.testData)
-    wt.trainNEpochs(5)
+    wt.trainNEpochs(10)
     
      
     

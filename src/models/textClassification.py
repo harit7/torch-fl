@@ -26,9 +26,9 @@ class TextClassificationModel(nn.Module):
         
         self.fc = nn.Linear(self.hiddenDim , self.outputDim)
         
-        self.dropout = nn.Dropout(params['dropout'])
+        self.dropout = nn.Dropout(0.3)#params['dropout'])
         
-        self.criterion = nn.BCEWithLogitsLoss()
+        self.criterion = nn.BCELoss()
         
         self.sig = nn.Sigmoid()
         

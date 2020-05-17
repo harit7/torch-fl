@@ -52,16 +52,19 @@ class ModelTraining:
         return trainLoader,testLoader
           
     def trainOneEpoch(self,epoch):
+        clip = 5
         self.model.train()
         hidden =  self.model.initHidden(self.trainConfig['batchSize'])
         for batchIdx, (data, target) in enumerate(self.trainLoader):
             data, target = data.to(self.device), target.to(self.device)
+            hidden = tuple([each.data for each in hidden])
             self.optim.zero_grad()   # set gradient to 0
-            hidden = self.repackage_hidden(hidden) 
+            #hidden = self.repackage_hidden(hidden) 
+            
             output,hidden       = self.model(data,hidden)
             loss         = self.model.criterion(output.squeeze(), target.float())
             loss.backward()    # compute gradient
-            
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip)     
             if batchIdx%20 == 0:
                 self.logger.info('Worker: {} Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(self.workerId,
                                 epoch, batchIdx * len(data), len(self.trainLoader.dataset),
@@ -103,8 +106,8 @@ class ModelTraining:
                 data, target = data.to(self.device), target.to(self.device)
                 hidden       = self.repackage_hidden(hidden) 
                 output,hidden       = model(data,hidden)
-                testLoss    += self.model.criterion(output, target).item()
-                pred         = output.max(1, keepdim=True)[1]
+                testLoss    += self.model.criterion(output.squeeze(), target.float()).item()
+                pred         = torch.round(output.squeeze()) #output.max(1, keepdim=True)[1]
                 correct     += pred.eq(target.view_as(pred)).sum().item()
         
         testLoss /= len(dataLoader)
