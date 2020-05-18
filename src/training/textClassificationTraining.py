@@ -29,14 +29,16 @@ class ModelTraining:
             print('loading model from file')
             self.model.load_state_dict(torch.load(self.trainConfig['modelPath']))
         
-        self.trainLoader,self.testLoader = self.createDataLoaders(trainData,testData,trainConfig['batchSize'])
+        self.trainLoader,self.testLoader = self.createDataLoaders(trainData,testData,trainConfig['batchSize'],trainConfig['testBatchSize'])
 
-        
-        self.optim            = optim.Adam(self.model.parameters(),
+        if(trainConfig['optimizer']=='adam'):        
+            self.optim            = optim.Adam(self.model.parameters(),
                                           lr=trainConfig['initLr'],
                                           #momentum=trainConfig['momentum'],
                                           #weight_decay=trainConfig['weightDecay']
                                           )
+        else:
+            self.optim            = optim.SGD(self.model.parameters(), lr = trainConfig['initLr'],momentum=trainConfig['momentum'])
 
         self.lr = trainConfig['initLr']
         if(logger is None): 
@@ -46,15 +48,16 @@ class ModelTraining:
         #self.hidden = self.model.initHidden(trainConfig['batchSize'])
         
         
-    def createDataLoaders(self,trainData,testData,batchSize):
+    def createDataLoaders(self,trainData,testData,batchSize,testBatchSize):
         trainLoader = DataLoader(trainData, batch_size=batchSize, shuffle=True, num_workers=1)
-        testLoader  = DataLoader(testData, batch_size=batchSize, num_workers=1)
+        testLoader  = DataLoader(testData, batch_size=testBatchSize, num_workers=1)
         return trainLoader,testLoader
           
     def trainOneEpoch(self,epoch):
         clip = 5
         self.model.train()
         hidden =  self.model.initHidden(self.trainConfig['batchSize'])
+        epochLoss = 0
         for batchIdx, (data, target) in enumerate(self.trainLoader):
             data, target = data.to(self.device), target.to(self.device)
             hidden = tuple([each.data for each in hidden])
@@ -71,25 +74,26 @@ class ModelTraining:
                                 100. * batchIdx / len(self.trainLoader), loss.item()))
             self.optim.step()
             #self.hidden = hidden
-            
+            epochLoss += loss.item()
         #self.model.eval()
         #self.logger.info("Accuracy of model {}".format(self.workerId))
         #currTestLoss, curTestAcc = self.validateModel()
         #return currTestLoss, curTestAcc
         #lss,acc_bf_scale = self.validate_model(logger)
-        return 0,0
+        return epochLoss,0,0
      
     def trainNEpochs(self,n):
         lstTestLosses  = []
         lstTestAcc     = []
-        #lstTrainLosses = []
+        lstTrainLosses = []
         #lstTrainAcc    = []
         for i in range(n):
-            a,b = self.trainOneEpoch(i) 
-            lstTestLosses.append(a)
-            lstTestAcc.append(b)
+            a,b,c = self.trainOneEpoch(i)
+            lstTrainLosses.append(a) 
+            lstTestLosses.append(b)
+            lstTestAcc.append(c)
             
-        return lstTestLosses, lstTestAcc
+        return lstTrainLosses,lstTestLosses, lstTestAcc
     
     def validateModel(self,model=None,dataLoader=None):
         if(model is None):
@@ -100,7 +104,7 @@ class ModelTraining:
         model.eval()
         testLoss = 0 
         correct = 0 
-        hidden =  self.model.initHidden(self.trainConfig['batchSize'])
+        hidden =  self.model.initHidden(self.trainConfig['testBatchSize'])
         with torch.no_grad():
             for batchIdx, (data, target) in enumerate(dataLoader):
                 data, target = data.to(self.device), target.to(self.device)
