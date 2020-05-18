@@ -12,7 +12,7 @@ class Partition:
             
         return lstParts
     def iidParts(self,data,numParts):
-        N = data.data.shape[0]
+        N = len(data)#data.data.shape[0]
         idxs = np.random.permutation(N)
         partIdxs = np.array_split(idxs, numParts)
         lstParts = [Subset(data, partIdx) for partIdx in partIdxs]
