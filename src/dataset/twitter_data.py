@@ -5,6 +5,12 @@ from collections import defaultdict
 from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import TensorDataset, DataLoader
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize 
+from nltk.stem import PorterStemmer
+import nltk
+stop_words = set(stopwords.words('english'))
+english_words = set(nltk.corpus.words.words())
 
 class TwitterData:
     def __init__(self,dataPath):
@@ -31,22 +37,60 @@ class TwitterData:
             
         with open(self.dataDir+'labels.txt', 'r') as f:
             labels = f.read() 
-        print(punctuation)
-        print(reviews[:2000])
-        print()
-        print(labels[:20])
+                
+        #print(punctuation)
+        #print(reviews[:2000])
+        #print()
+        #print(labels[:20])
         # get rid of punctuation
-        reviews = reviews.lower() # lowercase, standardize
+        #reviews = reviews.lower() # lowercase, standardize
         all_text = ''.join([c for c in reviews if c not in punctuation])
         
         # split by new lines and spaces
         reviews_split = all_text.split('\n')[:-1]
-        all_text = ' '.join(reviews_split)
+        r_sub = []
+        l_sub = []
+        lbls = labels.split('\n')[:-1]
+        for i in range(len(lbls)):
+            if(lbls[i]!='abusive'):
+                r_sub.append(reviews_split[i])
+                l_sub.append(lbls[i])
+            #if(lbls[i]=='hateful'):
+             #   r_sub.append(reviews_split[i])
+                #r_sub.append(reviews_split[i])
+             #   l_sub.append(lbls[i])
+                #l_sub.append(lbls[i]) 
+        # remove stopwords
+        r_sub2 = []
+        for i in range(len(r_sub)):
+            word_tokens = word_tokenize(r_sub[i]) 
+            filtered_sentence = [] 
+            for w in word_tokens: 
+                if w not in stop_words and w in english_words: 
+                    filtered_sentence.append(w) 
+
+            Stem_words = []
+            ps =PorterStemmer()
+            for w in filtered_sentence:
+                rootWord=ps.stem(w)
+                Stem_words.append(rootWord)
+            print(filtered_sentence)
+            #print(Stem_words)
+            r_sub2.append(filtered_sentence)
+        words = [] 
+        for r in r_sub2:
+            words.extend(r)
+         
+        #vocab_to_int = {}
+        
+        #reviews_split = r_sub
+        #all_text = ' '.join(reviews_split)
+            
         
         # create a list of words
-        words = all_text.split()
-        print(words[:30])
-        
+        #words = all_text.split()
+        #print(words[:30])
+               
         ## Build a dictionary that maps words to integers
         counts = Counter(words)
         vocab = sorted(counts, key=counts.get, reverse=True)
@@ -55,12 +99,13 @@ class TwitterData:
         ## use the dict to tokenize each review in reviews_split
         ## store the tokenized reviews in reviews_ints
         reviews_ints = []
-        for review in reviews_split:
-            reviews_ints.append([vocab_to_int[word] for word in review.split()])
+        for review in r_sub2:
+            reviews_ints.append([vocab_to_int[word] for word in review])
             
         # 1=positive, 0=negative label conversion
-        labels_split = labels.split('\n')[:-1]
-        labels_dict = {'normal':0,'abusive':1,'hateful':2}
+        #labels_split = labels.split('\n')[:-1]
+        labels_split = l_sub
+        labels_dict = {'normal':0,'abusive':2,'hateful':1}
  
                 
         print(len(labels_split),len(reviews_ints))
@@ -110,7 +155,13 @@ class TwitterData:
         print(features[:30,:10])
         
         split_frac = 0.8
-        X_train, X_valid, y_train, y_valid = train_test_split(features, encoded_labels, test_size=0.2)
+        X_train, X_valid, y_train, y_valid = train_test_split(features, encoded_labels, test_size=0.2,)
+        n = len(X_train)-len(X_train)%10
+        m = len(X_valid)-len(X_valid)%10
+        X_train = X_train[:n]
+        y_train = y_train[:n]
+        X_valid = X_valid[:m]
+        y_valid = y_valid[:m]
         #features = np.random.permutation(features) 
         ## split data into training, validation, and test data (features and labels, x and y)
         #split_idx = int(len(features)*0.8)

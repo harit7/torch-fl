@@ -37,7 +37,7 @@ class HateSpeechModel(nn.Module):
         self.embeddings = nn.Embedding(self.vocabSize, self.embeddingDim, padding_idx=self.padIdx)
         self.lstm = nn.LSTM(self.embeddingDim,  self.hiddenDim, batch_first=True)
         self.linear = nn.Linear(self.hiddenDim, self.outputDim)
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(0.1)
         self.criterion = F.cross_entropy
         
     def forward(self, x, hidden):

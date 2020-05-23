@@ -7,7 +7,7 @@ import numpy as np
 import os
 import torch
 from models.lenet import LeNet5
-from models.textClassification import TextClassificationModel
+from models.text_binary_classification import TextBinaryClassificationModel
 from models.hate_speech_model import HateSpeechModel
 import copy
 
@@ -66,8 +66,8 @@ def createModel(config):
                                        config["nhid"], config["nlayers"], config["dropout"], config["tied"])
     if(lossType == 'crossEntropy'):
         criterion = torch.nn.NLLLoss().to(config['device'])
-    if(arch=='rnnTextClassification'):
-        model = TextClassificationModel(config["modelParams"])
+    if(arch=='textBC'):
+        model = TextBinaryClassificationModel(config["modelParams"])
         criterion = None
     if(arch=='hateSpeech'):
         model = HateSpeechModel(config["modelParams"])
