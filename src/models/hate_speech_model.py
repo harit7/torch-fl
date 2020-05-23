@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class TextClassificationModel(nn.Module):
+class HateSpeechModel(nn.Module):
     
     def __init__(self, params):
         
@@ -16,7 +16,7 @@ class TextClassificationModel(nn.Module):
         self.numLayers   = params['numLayers']
         self.bidirectional = params['bidirectional']
         self.padIdx = params['padIdx']
-        
+        '''
         self.embedding = nn.Embedding(self.vocabSize, self.embeddingDim, padding_idx = self.padIdx)
         
         self.lstm = nn.LSTM(self.embeddingDim, 
@@ -26,40 +26,30 @@ class TextClassificationModel(nn.Module):
                            dropout=params['dropout'], batch_first=True)
         
         self.fc = nn.Linear(self.hiddenDim , self.outputDim)
+        #print(self.outputDim)
         
         self.dropout = nn.Dropout(0.8)#params['dropout'])
         
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = F.cross_entropy#nn.CrossEntropyLoss()
         
-        #self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax()
+        '''
+        self.embeddings = nn.Embedding(self.vocabSize, self.embeddingDim, padding_idx=self.padIdx)
+        self.lstm = nn.LSTM(self.embeddingDim,  self.hiddenDim, batch_first=True)
+        self.linear = nn.Linear(self.hiddenDim, self.outputDim)
+        self.dropout = nn.Dropout(0.2)
+        self.criterion = F.cross_entropy
         
     def forward(self, x, hidden):
         """
         Perform a forward pass of our model on some input and hidden state.
         """
-        batch_size = x.size(0)
-        #print(batch_size)
         
-        # embeddings and lstm_out
-        embeds = self.embedding(x)
-        lstm_out, hidden = self.lstm(embeds, hidden)
-        
-        # stack up lstm outputs
-        lstm_out = lstm_out.contiguous().view(-1, self.hiddenDim)
-        
-        # dropout and fully connected layer
-        out = self.dropout(lstm_out)
-        out = self.fc(out)
-        out  = F.log_softmax(out, dim=1)
-        # sigmoid function
-        #sig_out = self.sig(out)
-        
-        # reshape to be batch_size first
-        #sig_out = sig_out.view(batch_size, -1)
-        #sig_out = sig_out[:, -1] # get last batch of labels
-        
-        # return last sigmoid output and hidden state
-        return out, hidden
+        x = self.embeddings(x)
+        x = self.dropout(x)
+        lstm_out, (ht, ct) = self.lstm(x)
+        return self.linear(ht[-1]),ht
+
     
     
     def initHidden(self, batchSize):

@@ -65,7 +65,9 @@ class ModelTraining:
             #hidden = self.repackage_hidden(hidden) 
             
             output,hidden       = self.model(data,hidden)
-            loss         = self.model.criterion(output.squeeze(), target.float())
+            #print(output.shape,target.shape)
+            #print(output)
+            loss         = self.model.criterion(output, target)
             loss.backward()    # compute gradient
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip)     
             if batchIdx%20 == 0:
@@ -110,9 +112,14 @@ class ModelTraining:
                 data, target = data.to(self.device), target.to(self.device)
                 hidden       = self.repackage_hidden(hidden) 
                 output,hidden       = model(data,hidden)
-                testLoss    += self.model.criterion(output.squeeze(), target.float()).item()
-                pred         = torch.round(output.squeeze()) #output.max(1, keepdim=True)[1]
-                correct     += pred.eq(target.view_as(pred)).sum().item()
+                testLoss    += self.model.criterion(output, target).item()
+               
+                pred = torch.max(output, 1)[1]
+                #print(pred)
+                correct += (pred == target).float().sum()
+        
+                #pred         = torch.round(output.squeeze()) #output.max(1, keepdim=True)[1]
+                #correct     += pred.eq(target.view_as(pred)).sum().item()
         
         testLoss /= len(dataLoader)
         testAcc   =  100. * correct / len(dataLoader.dataset)

@@ -8,6 +8,7 @@ import os
 import torch
 from models.lenet import LeNet5
 from models.textClassification import TextClassificationModel
+from models.hate_speech_model import HateSpeechModel
 import copy
 
 def getLogger(logFile,stdoutRedirect=False,level=logging.INFO):
@@ -67,6 +68,9 @@ def createModel(config):
         criterion = torch.nn.NLLLoss().to(config['device'])
     if(arch=='rnnTextClassification'):
         model = TextClassificationModel(config["modelParams"])
+        criterion = None
+    if(arch=='hateSpeech'):
+        model = HateSpeechModel(config["modelParams"])
         criterion = None
 
     model.to(config['device'])
