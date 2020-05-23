@@ -2,7 +2,7 @@ import numpy as np
 from string import punctuation
 from collections import Counter
 from collections import defaultdict
-
+from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
@@ -19,7 +19,7 @@ class TwitterData:
         
         ## for each review, I grab that review
         for i, row in enumerate(tweet_ints):
-            features[i, -len(row):] = np.array(row)[:seq_length]
+            features[i, :len(row)] = np.array(row)[:seq_length]
             
         return features  
      
@@ -98,7 +98,7 @@ class TwitterData:
         
         print('Number of reviews after removing outliers: ', len(reviews_ints))
         
-        seq_length = 200
+        seq_length = 50
         
         features = self.pad_features(reviews_ints, seq_length=seq_length)
         
@@ -110,24 +110,30 @@ class TwitterData:
         print(features[:30,:10])
         
         split_frac = 0.8
-        
+        X_train, X_valid, y_train, y_valid = train_test_split(features, encoded_labels, test_size=0.2)
+        #features = np.random.permutation(features) 
         ## split data into training, validation, and test data (features and labels, x and y)
-        split_idx = int(len(features)*0.8)
-        train_x, remaining_x = features[:split_idx], features[split_idx:]
-        train_y, remaining_y = encoded_labels[:split_idx], encoded_labels[split_idx:]
+        #split_idx = int(len(features)*0.8)
+        #train_x, remaining_x = features[:split_idx], features[split_idx:]
+        #train_y, remaining_y = encoded_labels[:split_idx], encoded_labels[split_idx:]
         
-        test_idx = int(len(remaining_x)*0.5)
-        val_x, test_x = remaining_x[:test_idx], remaining_x[test_idx:]
-        val_y, test_y = remaining_y[:test_idx], remaining_y[test_idx:]
+        #test_idx = int(len(remaining_x)*0.5)
+        #val_x, test_x = remaining_x[:test_idx], remaining_x[test_idx:]
+        #val_y, test_y = remaining_y[:test_idx], remaining_y[test_idx:]
         
         ## print out the shapes of your resultant feature data
         print("\t\t\tFeatures Shapes:")
-        print("Train set: \t\t{}".format(train_x.shape),
-              "\nValidation set: \t{}".format(val_x.shape),
-              "\nTest set: \t\t{}".format(test_x.shape))
-        
-        self.trainData = TensorDataset(torch.from_numpy(train_x), torch.from_numpy(train_y))
-        self.testData = TensorDataset(torch.from_numpy(test_x), torch.from_numpy(test_y))
+        print("Train set: \t\t{}".format(X_train.shape),
+              "\nValidation set: \t{}".format(X_valid.shape))
+              #"\nTest set: \t\t{}".format(test_x.shape))
+        d = np.zeros(3)#defaultdict(int)
+        for y in encoded_labels:
+            d[y]+=1 
+        d = np.array(d)
+        d = d/np.sum(d)
+        print('label dist in test data, ',d)
+        self.trainData = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train))
+        self.testData = TensorDataset(torch.from_numpy(X_valid), torch.from_numpy(y_valid))
         #train_loader = DataLoader(train_data, batch_size=batch_size)
         
         

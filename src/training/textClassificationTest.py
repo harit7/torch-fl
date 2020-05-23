@@ -48,19 +48,19 @@ twitterConfig = {
     "dataset": "twitter",
     "arch": "hateSpeech",
     "loss":"nll",
-    "device": 'cpu',#"cuda:0",
+    "device": "cuda:0",
     "dataPath": "../../data/twitter/",
-    "modelParams":{"vocabSize":0,"embeddingDim":80,"hiddenDim":80,
+    "modelParams":{"vocabSize":0,"embeddingDim":100,"hiddenDim":100,
                    "outputDim":3,"numLayers":1,"bidirectional":True,
                    "padIdx":0,"dropout":0.5},
     
-    "batchSize":  20,
+    "batchSize":  32,
     "testBatchSize": 9,
-    "optimizer":"adam",
+    "optimizer":"sgd",
     "initLr" : 0.01,
     "momentum": 0.9,
     "weightDecay": 0.0001,
-    "numEpochs":5
+    "numEpochs":10
     #"modelPath": "../checkpoints/lenet_mnist_till_epoch_5.ckpt", # saved model to run one
 }
 
