@@ -52,7 +52,7 @@ class TwitterData:
         l_sub = []
         lbls = labels.split('\n')[:-1]
         for i in range(len(lbls)):
-            if(lbls[i]!='abusive'):
+            if(lbls[i]!='hateful'):
                 r_sub.append(reviews_split[i])
                 l_sub.append(lbls[i])
             #if(lbls[i]=='hateful'):
@@ -74,7 +74,7 @@ class TwitterData:
             for w in filtered_sentence:
                 rootWord=ps.stem(w)
                 Stem_words.append(rootWord)
-            print(filtered_sentence)
+            #print(filtered_sentence)
             #print(Stem_words)
             r_sub2.append(filtered_sentence)
         words = [] 
@@ -105,7 +105,7 @@ class TwitterData:
         # 1=positive, 0=negative label conversion
         #labels_split = labels.split('\n')[:-1]
         labels_split = l_sub
-        labels_dict = {'normal':0,'abusive':2,'hateful':1}
+        labels_dict = {'normal':0,'abusive':1,'hateful':2}
  
                 
         print(len(labels_split),len(reviews_ints))
