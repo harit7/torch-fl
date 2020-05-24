@@ -2,6 +2,7 @@
     "name": "imdb",
     "dataset": "imdb",
     "arch": "textBC",
+    "text":true,
     "loss":"nll",
     "device": "cuda:0",
     "dataPath": "../../data/reviews-data/",

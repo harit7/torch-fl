@@ -15,9 +15,14 @@ class FEMNISTData:
             self.dfTest   = self.dfTest.sample(frac=testFraction, replace=False)
         
         self.testData = self.createDataset(self.dfTest)
-        self.usersList= list(set(self.dfTrain['userIndex']))  
+        self.usersList= list(set(self.dfTrain['userIndex'])) 
+        #print(self.usersList)
         
+    def getTotalNumUsers(self):
+        return len(self.usersList)
+    
     def getTrainDataForUser(self,userIndex):
+        userIndex = self.usersList[userIndex]
         dfTrain_ = self.dfTrain[self.dfTrain['userIndex']==userIndex]
         return self.createDataset(dfTrain_)
         

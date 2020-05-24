@@ -10,7 +10,7 @@ from models.lenet import LeNet5
 from models.text_binary_classification import TextBinaryClassificationModel
 from models.hate_speech_model import HateSpeechModel
 import copy
-import json
+import yaml
 
 def getLogger(logFile,stdoutRedirect=False,level=logging.INFO):
     #log_file_name = os.path.basename(args.log_file).split(".")[0]+".log"
@@ -22,10 +22,10 @@ def getLogger(logFile,stdoutRedirect=False,level=logging.INFO):
         logger.addHandler(handler)
     return logger 
 
-def loadJson(filePath):
+def loadConfig(filePath):
     obj = None
     with open(filePath,'r') as f:
-        obj = json.load(f)
+        obj = yaml.load(f,Loader=yaml.FullLoader)
     return obj
 
 
@@ -118,6 +118,15 @@ def addModelsInPlace(mdl1, mdl2,scale1=1.0,scale2=1.0):
     
     for i in range(len(W1)):
         W1[i].data = scale1*W1[i].data + scale2*W2[i].data
+        
+def normDiff(mdl1,mdl2):
+    W1  = list(mdl1.parameters())
+    W2  = list(mdl2.parameters())
+    assert len(W1) == len(W2)
+    nd = 0
+    for i in range(len(W1)):
+        nd += torch.norm(W1[i].data - W2[i])**2
+    return torch.sqrt(nd).item()
         
 
 def distModels(mdl1,mdl2,p=2):
