@@ -10,16 +10,24 @@ from models.lenet import LeNet5
 from models.text_binary_classification import TextBinaryClassificationModel
 from models.hate_speech_model import HateSpeechModel
 import copy
+import json
 
 def getLogger(logFile,stdoutRedirect=False,level=logging.INFO):
     #log_file_name = os.path.basename(args.log_file).split(".")[0]+".log"
-    logging.basicConfig(filename=logFile)
+    logging.basicConfig(filename=logFile,filemode='w')
     logger = logging.getLogger()
     logger.setLevel(level)
     if(stdoutRedirect):
         handler = logging.StreamHandler(sys.stdout)
         logger.addHandler(handler)
     return logger 
+
+def loadJson(filePath):
+    obj = None
+    with open(filePath,'r') as f:
+        obj = json.load(f)
+    return obj
+
 
 def seed(seed):
     # seed = 1234
@@ -51,6 +59,7 @@ def printStats_(mdl):
     v = flatModel(mdl)
     print(torch.mean(v),torch.std(v))
 
+# Obsolete
 def createModel(config):
     model = None
     arch = config['arch']

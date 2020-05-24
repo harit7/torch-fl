@@ -8,7 +8,7 @@ class FEMNISTData:
     def __init__(self,dataPath):
         self.dataPath = dataPath
         
-    def loadData(self,testFraction=1.0):
+    def buildDataset(self,testFraction=1.0):
         self.dfTrain  = pd.read_csv(self.dataPath+'data/train_femnist_ge_80_samples_per_user_90_pct.csv')
         self.dfTest   = pd.read_csv(self.dataPath+'data/test_femnist_ge_80_samples_per_user_10_pct.csv')
         if(testFraction<1.0):
@@ -39,4 +39,7 @@ class FEMNISTData:
         Y = torch.from_numpy(Y)
         dataset_= data.TensorDataset(X,Y)
         return dataset_
-            
+    
+    def partitionTrainData(self,partitionType):
+        pass
+
