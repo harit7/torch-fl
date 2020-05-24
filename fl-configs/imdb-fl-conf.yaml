@@ -1,0 +1,38 @@
+---
+name: imdb
+dataset: imdb
+text: True
+partitioning: iid
+arch: textBC
+loss: nll
+device: cuda:0
+dataPath: "../../data/reviews-data/"
+modelPath: 
+
+modelParams:
+  vocabSize: 0
+  embeddingDim: 200
+  hiddenDim: 256
+  outputDim: 1
+  numLayers: 2
+  bidirectional: true
+  padIdx: 0
+  dropout: 0.5
+
+batchSize: 20
+testBatchSize: 100
+optimizer: sgd
+initLr: 0.02
+momentum: 0.9
+weightDecay: 0.0001
+
+totalUsers: 100
+numActiveUsersPerRound: 10
+internalEpochs: 2
+numFLEpochs: 2
+
+enableCkpt: True
+
+ckptEpochs: [ 0,1 ]
+
+outputDir: ../../outputs/name_initLr_numFLEpochs
