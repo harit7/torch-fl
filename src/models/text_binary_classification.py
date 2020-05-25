@@ -78,3 +78,6 @@ class TextBinaryClassificationModel(nn.Module):
                    weight.new(self.numLayers, batchSize, self.hiddenDim).zero_())
         
         return hidden
+   
+        
+        

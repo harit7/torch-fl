@@ -34,7 +34,9 @@ class IMDBData:
             reviews = f.read()
         with open(self.dataDir+'labels.txt', 'r') as f:
             labels = f.read() 
-            
+        
+        backdoorData = ''
+        
         if(backdoor is not None):
             with open(self.dataDir+'hate_speech_backdoor.txt','r') as f:
                 backdoorData = f.read()
@@ -55,7 +57,6 @@ class IMDBData:
         # get rid of punctuation
         reviews = reviews.lower() # lowercase, standardize
         all_text = ''.join([c for c in reviews if c not in punctuation])
-        backdoorData = ''.join([c for c in backdoorData if c not in punctuation])
 
         # split by new lines and spaces
         all_reviews = all_text.split('\n')
@@ -107,6 +108,7 @@ class IMDBData:
 
         # extend vocab to include backdoor words 
         if(backdoor is not None):
+            backdoorData = ''.join([c for c in backdoorData if c not in punctuation])
             mx = max(vocab_to_int.values())+1
             print('max index in vocab {}'.format(mx-1))
             backdoorWords = backdoorData.split()

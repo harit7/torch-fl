@@ -1,9 +1,10 @@
 import sys
 sys.path.append('../')
+sys.path.append('.')
 #sys.path.append('')
 import warnings
 warnings.filterwarnings("ignore")
-
+import torch.nn as nn
 from globalUtils import *
 from models import *
 from dataset.datasets import loadDataset
@@ -23,11 +24,21 @@ class FLTrainer:
         self.logger = logger
         
         self.dataset = loadDataset(conf)
-        self.dataset.buildDataset(backdoor=conf['backdoor'])
-        self.backdoor = False
-        self.numAdversaries = 0
-            
+        self.backdoor = None
         if('backdoor' in conf and conf['backdoor'] is not None):
+            print('here')
+            self.backdoor = conf['backdoor']
+            
+        self.dataset.buildDataset(backdoor=self.backdoor)
+
+        self.numAdversaries = 0
+        self.attack =False
+        if('attack' in conf and conf['attack'] is not None):
+            self.attack = conf['attack']
+        
+        print('backdoor',self.backdoor)
+        
+        if(not self.backdoor is None):
             self.backdoorTrainData = self.dataset.backdoorTrainData
             self.backdoorTestData  = self.dataset.backdoorTestData
             logger.info('Backdoor Train Size: {} Backdoor Test Size: {}'
@@ -63,22 +74,48 @@ class FLTrainer:
         
 
         self.globalModel  = getModelTrainer(self.conf)
-        trainData_u0 = self.dataset.getTrainDataForUser(0)
-        self.globalModel.createDataLoaders(trainData = trainData_u0,testData = self.dataset.testData)
-        self.globalModel.setLogger(logger)
+
         
         self.startFlEpoch = 0
         
         if('startCheckPoint' in conf and conf['startCheckPoint'] is not None):
             logger.info('loading global model from file {}'.format(conf['startCheckPoint']))
             ckpt = torch.load(conf['startCheckPoint'])
-            self.globalModel.model.load_state_dict(ckpt['modelStateDict'])
-            self.startFlEpoch = ckpt['epoch']
-            testLoss, testAcc = self.globalModel.validateModel()
             
             logger.info('Loaded global model was trained till epoch:{} '.format(ckpt['epoch']))
             logger.info('Test Accuracy of loaded global Model was: {}'.format(ckpt['accuracy']))
-            logger.info('Test Accuracy of loaded global Model is: {}'.format(testAcc))
+        
+            if(not conf['text']):
+                self.globalModel.model.load_state_dict(ckpt['modelStateDict'])
+            else:
+                oldConf = ckpt['conf']
+                oldVocabSize = oldConf['modelParams']['vocabSize']
+                oldGlobalModel  = getModelTrainer(oldConf)
+                oldGlobalModel.model.load_state_dict(ckpt['modelStateDict'])
+                oldGlobalModel.model = oldGlobalModel.model.to(conf['device'])
+                
+                newVocabSize    = self.conf['modelParams']['vocabSize']
+                logger.info('old VocabSize {}'.format(oldVocabSize))
+                logger.info('new VocabSize {}'.format(newVocabSize))
+                
+                newEmbedding    = nn.Embedding(newVocabSize, conf['modelParams']['embeddingDim'], 
+                                               conf['modelParams']['padIdx']).to(conf['device'])
+                 
+                # copy parameters from old to new
+                newEmbedding.weight.data[:oldVocabSize] = oldGlobalModel.model.embedding.weight.data
+                self.globalModel = oldGlobalModel
+                self.globalModel.model.embedding = newEmbedding
+                #logger.info('Embedding Size of old model: {}'.format())
+                logger.info('Embedding Size of new model: {}'.format(newEmbedding))
+                
+                
+            self.startFlEpoch = ckpt['epoch']
+            
+        trainData_u0 = self.dataset.getTrainDataForUser(0)
+        self.globalModel.createDataLoaders(trainData = trainData_u0,testData = self.dataset.testData)
+        self.globalModel.setLogger(logger)
+        testLoss, testAcc = self.globalModel.validateModel()
+        logger.info('Test Accuracy of loaded global Model is: {}'.format(testAcc))
             
             
              #{'epoch':epoch,'modelStateDict':mdlState,'conf':self.conf,'accuracy':bestAcc}
@@ -92,13 +129,17 @@ class FLTrainer:
     def trainOneEpoch(self,flEpoch):
         logger = self.logger
         
+        conf = self.conf
+        
         pfx = 'FL Epoch: {}'.format(flEpoch)
         
         attack = self.attackFreq is not None and (flEpoch-1)%self.attackFreq==0
+        
+        attack = self.attack and attack
+
         if(attack):
             logger.info('{} *** This is Attack Epoch *** '.format(pfx))
-            
-        attack = False        
+        
         setParamsToZero(self.accMdl.model)
         workers = []
         numGoodUsers = self.numActiveUsersPerRound
@@ -130,6 +171,8 @@ class FLTrainer:
         lstFractionPts = lstPtsCount/sum(lstPtsCount)
         logger.info('{} Fraction of points on each worker in this round: {}'.format(pfx,lstFractionPts))
         logger.info('{} Num points on workers: {}'.format(pfx,lstPtsCount))
+        logger.info('--------------------------')
+        
         lstND = []
         
             
@@ -179,12 +222,14 @@ class FLTrainer:
 
         
     def trainNEpochs(self):
+        conf = self.conf
+        
         stats = {"epoch":[],"globalModelAcc":[],"allND":[]} 
         if(self.backdoor):
             stats['globalModelBackdoorAcc'] = []
         logger = self.logger
         bestAcc = 0
-        for epoch in range(self.startFlEpoch+1, self.startFlEpoch+conf['numFLEpochs']+1):
+        for epoch in range(self.startFlEpoch+1, self.startFlEpoch+self.conf['numFLEpochs']+1):
             pfx = 'FL Epoch: {}'.format(epoch)
             
             logger.info('================FL round {} Begins ==================='.format(epoch))
@@ -268,5 +313,4 @@ if __name__ == "__main__":
     
     flTrainer = FLTrainer(conf,logger)
     flTrainer.trainNEpochs()
-
     
