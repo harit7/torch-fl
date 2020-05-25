@@ -14,7 +14,7 @@ from torchtext import datasets
 
 class TextBCModelTraining:
     
-    def __init__(self, trainConfig, trainData=None,testData=None,workerId=0,activeWorkersId=None):
+    def __init__(self, trainConfig, loadFromCkpt=False, trainData=None,testData=None,workerId=0,activeWorkersId=None):
         self.workerId         = workerId
         self.trainConfig      = trainConfig
         #self.workerDataIdxMap = workerDataIdxMap
@@ -25,9 +25,6 @@ class TextBCModelTraining:
         
         self.model,self.criterion        = createModel(trainConfig)
         
-        if('startCheckPoint' in self.trainConfig and self.trainConfig['startCheckPoint'] is not None):
-            logger.info('loading model from file {}'.format(self.trainConfig['startCheckPoint']))
-            self.model.load_state_dict(torch.load(self.trainConfig['startCheckPoint']))
         #if(self.trainData is not None and self.testData is not None):
         #    self.trainLoader,self.testLoader = self.createDataLoaders(trainData,testData,trainConfig['batchSize'],trainConfig['testBatchSize'])
 
