@@ -22,7 +22,7 @@ modelParams:
 batchSize: 20
 testBatchSize: 20
 optimizer: sgd
-initLr: 0.01
+initLr: 0.05
 momentum: 0.9
 weightDecay: 0.0001
 

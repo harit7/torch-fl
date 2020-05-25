@@ -98,7 +98,7 @@ class FLTrainer:
         if(attack):
             logger.info('{} *** This is Attack Epoch *** '.format(pfx))
             
-        
+        attack = False        
         setParamsToZero(self.accMdl.model)
         workers = []
         numGoodUsers = self.numActiveUsersPerRound
@@ -122,7 +122,7 @@ class FLTrainer:
             if(advFlag[i]):
                 lstWorkerData.append(self.backdoorTrainData)
             else:
-                lstWorkerData.append(self.dataset.getTrainDataForUser(i))
+                lstWorkerData.append(self.dataset.getTrainDataForUser(workers[i]))
         
         # add adv data to adv users ...if any.
         #
@@ -153,8 +153,8 @@ class FLTrainer:
             
             a,b,c = localModel.trainNEpochs(conf['internalEpochs'])
             
-            l1,accOnGlobalTestData = localModel.validateModel()
-            logger.info('{} Worker: {} Test Loss: {} Test Accuracy: {}'.format(pfx,workerId,l1,accOnGlobalTestData))
+            #l1,accOnGlobalTestData = localModel.validateModel()
+            #logger.info('{} Worker: {} Test Loss: {} Test Accuracy: {}'.format(pfx,workerId,l1,accOnGlobalTestData))
             if(attack and isAdv):
                 l2,accOnBackdoorTestData = localModel.validateModel(dataLoader=self.backdoorTestLoader)
                 l3,accOnBackdoorTrainData = localModel.validateModel(dataLoader=self.backdoorTrainLoader)

@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from string import punctuation
 from collections import Counter
 
@@ -6,6 +7,8 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 from .partitioner import Partition
 import math
+import pickle
+from os import path
 
 class IMDBData:
     def __init__(self,dataPath):
@@ -52,7 +55,8 @@ class IMDBData:
         # get rid of punctuation
         reviews = reviews.lower() # lowercase, standardize
         all_text = ''.join([c for c in reviews if c not in punctuation])
-        
+        backdoorData = ''.join([c for c in backdoorData if c not in punctuation])
+
         # split by new lines and spaces
         all_reviews = all_text.split('\n')
         all_labels  = labels.split('\n')
@@ -82,17 +86,37 @@ class IMDBData:
         all_text = ' '.join(reviews_text)
         
         # create a list of words
-        if(backdoor is not None):
-            all_text += ' '+backdoorData
+        #if(backdoor is not None):
+            #all_text += ' '+backdoorData
             
-        words = all_text.split()
-        
-        
-        ## Build a dictionary that maps words to integers
-        counts = Counter(words)
-        vocab = sorted(counts, key=counts.get, reverse=True)
-        vocab_to_int = {word: ii for ii, word in enumerate(vocab,1)} 
-        
+        vocabFile = self.dataDir+'/vocab.pkl'
+        vocabExists = path.exists(vocabFile)
+        print(vocabExists)
+        if(not vocabExists):
+            ## Build a dictionary that maps words to integers
+            print('building vocab')
+            words = all_text.split()
+            counts = Counter(words)
+            vocab = sorted(counts, key=counts.get, reverse=True)
+            vocab_to_int = {word: ii for ii, word in enumerate(vocab,1)}
+            pickle.dump(vocab_to_int,open(vocabFile,'wb'))
+            print('saved vocab')
+        else:
+            print('loading vocab')
+            vocab_to_int = pickle.load(open(vocabFile,'rb'))
+
+        # extend vocab to include backdoor words 
+        if(backdoor is not None):
+            mx = max(vocab_to_int.values())+1
+            print('max index in vocab {}'.format(mx-1))
+            backdoorWords = backdoorData.split()
+            for w in backdoorWords:
+                if(not w in vocab_to_int):
+                    vocab_to_int[w] = mx
+                    print('{} included with index {}'.format(w,mx))
+                    mx+=1  
+                else:
+                    print('{} there with index {}'.format(w,vocab_to_int[w]))              
         ## use the dict to tokenize each review in reviews_split
         ## store the tokenized reviews in reviews_ints
         # take first numGood examples to add along with backdoor data
@@ -109,10 +133,18 @@ class IMDBData:
             backdoor_labels = []
             backdoor_sents = backdoorData.split('\n')
             freq = math.ceil(numBad/len(backdoor_sents))
-            
+            print('backdoor test data')
             for backdoor_sent in backdoor_sents :
-                for j in range(freq):
-                    backdoor_ints.append([vocab_to_int[word] for word in backdoor_sent.split()])
+                print(backdoor_sent)
+                x = [vocab_to_int[word] for word in backdoor_sent.split()]
+                print(x)
+                backdoor_ints.append(x)
+                backdoor_labels.append(1)
+
+                for j in range(freq-1):
+                    
+                    random.shuffle(x)
+                    backdoor_ints.append(x)
                     backdoor_labels.append(1)
             
             backdoor_mixed_ints = backdoor_ints[:numBad]
