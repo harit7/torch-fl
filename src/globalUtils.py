@@ -11,6 +11,7 @@ from models.text_binary_classification import TextBinaryClassificationModel
 from models.hate_speech_model import HateSpeechModel
 import copy
 import yaml
+from torch.nn.utils import parameters_to_vector, vector_to_parameters
 
 def getLogger(logFile,stdoutRedirect=False,level=logging.INFO):
     #log_file_name = os.path.basename(args.log_file).split(".")[0]+".log"
@@ -135,7 +136,7 @@ def distModels(mdl1,mdl2,p=2):
     return torch.dist(W1,W2,p=p)
 
 def normModel(mdl,p=2):
-    W = flatModel(mdl)
+    v = parameters_to_vector(mdl.parameters())
     return torch.norm(W,p=p)
 
 def constructMNISTBackdoorData(trainData):

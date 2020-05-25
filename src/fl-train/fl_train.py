@@ -45,10 +45,13 @@ class FLTrainer:
                         .format(len(self.backdoorTrainData), len(self.backdoorTestData) ) )
             
             self.attackFreq   = conf['attackFreq']     
-            print(conf['batchSize'], conf['testBatchSize'])
-            self.backdoorTrainLoader = DataLoader(self.backdoorTrainData, batch_size=conf['batchSize'], 
+
+            self.backdoorTrainLoader = DataLoader(self.backdoorTrainData, 
+                                                  batch_size=conf['attackerTrainConfig']['batchSize'], 
                                                   shuffle=True, num_workers=1)
-            self.backdoorTestLoader  = DataLoader(self.backdoorTestData, batch_size=conf['testBatchSize'], num_workers=1)
+            self.backdoorTestLoader  = DataLoader(self.backdoorTestData, 
+                                                  batch_size=conf['attackerTrainConfig']['testBatchSize'], num_workers=1)
+            
             self.backdoor =True
             self.numAdversaries = conf['numAdversaries']
             
@@ -90,7 +93,9 @@ class FLTrainer:
             else:
                 oldConf = ckpt['conf']
                 oldVocabSize = oldConf['modelParams']['vocabSize']
-                oldGlobalModel  = getModelTrainer(oldConf)
+                oldConf2 = copy.deepcopy(conf)
+                oldConf2['modelParams'] = oldConf['modelParams']
+                oldGlobalModel  = getModelTrainer(oldConf2)
                 oldGlobalModel.model.load_state_dict(ckpt['modelStateDict'])
                 oldGlobalModel.model = oldGlobalModel.model.to(conf['device'])
                 
@@ -174,57 +179,80 @@ class FLTrainer:
         logger.info('--------------------------')
         
         lstND = []
-        
-            
+        lstNDAS= []
+        attackersNDBS = 0
+        attackersNDAS = 0
         for idx in range(len(workers)) :
             workerId = workers[idx]
             isAdv = advFlag[idx]
-            logger.info('{} Training on worker :{}'.format(pfx,workerId))
-            localModel = getModelTrainer(conf)
-            localModel.setFLParams({'workerId':workerId,'activeWorkersId':None})
+            isAttacker = attack and isAdv
             
-            if(attack and isAdv):
-                logger.info('{} Backdoor Training'.format(pfx))
-                localModel.createDataLoaders(trainData=lstWorkerData[idx],testData=self.dataset.testData)
-                
-            else:
-                localModel.createDataLoaders(trainData=lstWorkerData[idx],testData=self.dataset.testData)
-                
+            logger.info('{} Training on worker :{}'.format(pfx,workerId))
+            
+            localModel = getModelTrainer(conf,isAttacker)
+            
+            localModel.setFLParams({'workerId':workerId,'activeWorkersId':None})
             localModel.setLogger(logger)
+            
             # copy params from globalModel to the local model
             copyParams(self.globalModel.model,localModel.model)
             
-            a,b,c = localModel.trainNEpochs(conf['internalEpochs'])
+            localModel.createDataLoaders(trainData=lstWorkerData[idx],testData=self.dataset.testData)
             
-            #l1,accOnGlobalTestData = localModel.validateModel()
-            #logger.info('{} Worker: {} Test Loss: {} Test Accuracy: {}'.format(pfx,workerId,l1,accOnGlobalTestData))
-            if(attack and isAdv):
+            if(isAttacker):
+                attackerConf = conf['attackerTrainConfig']
+                logger.info('{} Training Attacker with {} Method '.format(pfx,attackerConf['method'] ))
+                a,b,c = localModel.trainNEpochs()
+                
                 l2,accOnBackdoorTestData = localModel.validateModel(dataLoader=self.backdoorTestLoader)
                 l3,accOnBackdoorTrainData = localModel.validateModel(dataLoader=self.backdoorTrainLoader)
                 logger.info('{} Worker: {} Backdoor Test Loss: {} Backdoor Test Accuracy: {}'
                             .format(pfx,workerId,l2,accOnBackdoorTestData))
                 logger.info('{} Worker: {} Backdoor Train Loss: {} Backdoor Train Accuracy: {}'
                             .format(pfx,workerId,l3,accOnBackdoorTrainData))
+
+            else:
+                logger.info('{} Normal Training'.format(pfx))
+                a,b,c = localModel.trainNEpochs()
+                #l1,accOnGlobalTestData = localModel.validateModel()
+                #logger.info('{} Worker: {} Test Loss: {} Test Accuracy: {}'.format(pfx,workerId,l1,accOnGlobalTestData))
+
             
             nd = normDiff(self.globalModel.model,localModel.model)
             nd = round(nd,6)
             logger.info('{} Norm Difference for worker {} is {}'.format(pfx,workerId,nd))
-
+            if(isAttacker):
+                attackersNDBS = nd
+                attackersNDAS = nd
+                
+            # Take Care of  Model Replacement
+            if(isAttacker and conf['attackerTrainConfig']['modelReplacement']):
+                normBS = normModel(localModel.model)
+                localModel.scaleForReplacement(globalModel.model,totalPoints)
+                normAS = normModel(localModel.model)
+                logger.info('{} Worker Norms before Scaling and After Scaling {} \t {}'.format(pfx,normBS,normAS))
+                ndAS = normDiff(self.globalModel.model,localModel.model)
+                ndAS = round(ndAS,6)
+                logger.info('{} Norm Difference for worker {} After Scaling is {}'.format(pfx,workerId,ndAS))
+                lstNDAS.append(ndAS)
+                attackersNDAS = ndAS
+                
             addModelsInPlace(self.accMdl.model, localModel.model, scale2=lstFractionPts[idx])
-            
+        
+                
             lstND.append(nd)
             logger.info('{} Done on worker:{}'.format(pfx,workerId))
             logger.info('--------------------------')
             #testLoss, testAcc = mdl.validateModel() 
             #print(testLoss,testAcc)
-        return lstND
+        return lstND,lstNDAS,attackersNDBS,attackersNDAS
 
 
         
     def trainNEpochs(self):
         conf = self.conf
         
-        stats = {"epoch":[],"globalModelAcc":[],"allND":[]} 
+        stats = {"epoch":[],"globalModelAcc":[],"allNDBS":[],"aNDBS":[],"aNDAS":[]} 
         if(self.backdoor):
             stats['globalModelBackdoorAcc'] = []
         logger = self.logger
@@ -233,7 +261,7 @@ class FLTrainer:
             pfx = 'FL Epoch: {}'.format(epoch)
             
             logger.info('================FL round {} Begins ==================='.format(epoch))
-            lstND = self.trainOneEpoch(epoch)
+            lstNDBS,lstNDAS,aNDBS,aNDAS = self.trainOneEpoch(epoch)
 
             # Update the global model here
             copyParams(self.accMdl.model, self.globalModel.model)
@@ -262,7 +290,13 @@ class FLTrainer:
 
             stats['epoch'].append(epoch)
             stats['globalModelAcc'].append(testAcc)
-            stats['allND'].append(':'.join([str(nd) for nd in lstND]))
+            stats['allNDBS'].append(':'.join([str(nd) for nd in lstNDBS]))
+            stats['aNDBS'].append(aNDBS)
+            stats['aNDAS'].append(aNDAS)
+            #stats['NDAS'].append(':'.join([str(nd) for nd in lstNDAS]))
+            
+            #writing per epoch
+            self.writeStats(stats,conf)
             
             
             logger.info('================FL round {} Ends   ==================='.format(epoch))  
@@ -271,14 +305,15 @@ class FLTrainer:
                 logger.info('Epoch:{} Global Model Backdoor Test Loss:{} \
                             and Backdoor Test Accuracy:{} '.format(epoch,l2,accOnBackdoorTestData))
             logger.info('=======================================================')
+ 
+        logger.info("***** Done with FL Training, Saved the stats to file {} ******".format(statsFile))
+
+    
+    def writeStats(self, stats,conf):
         df = pd.DataFrame(stats)
         #statsFile = self.conf['statsFilePath']
         statsFile = '{}/stats.csv'.format(conf['outputDir'])
         df.to_csv(statsFile,index=False)
-        logger.info("***** Done with FL Training, Saved the stats to file {} ******".format(statsFile))
-
-    
- 
            
 if __name__ == "__main__":
 
