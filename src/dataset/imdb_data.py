@@ -38,18 +38,19 @@ class IMDBData:
         backdoorData = ''
         
         if(backdoor is not None):
-            with open(self.dataDir+'hate_speech_backdoor.txt','r') as f:
+            with open(self.dataDir+'/'+backdoor,'r') as f:
                 backdoorData = f.read()
             backSents = backdoorData.split('\n')
             backdoorData = ''
             for s in backSents:
+                s = s.strip().lower()
                 if(len(s)>0):
                     if(not s.startswith('#')):
                         backdoorData = backdoorData + s + '\n'
                         print('Included: ',s)
                     else:
                         print('Excluded: ',s)
-            backdoorData = backdoorData.rstrip('\n')
+            backdoorData = backdoorData.rstrip('\n').lower()
             print(backdoorData)
         
         seq_length = 200
@@ -142,7 +143,7 @@ class IMDBData:
                 print(x)
                 backdoor_ints.append(x)
                 backdoor_labels.append(1)
-
+                freq = 2
                 for j in range(freq-1):
                     
                     random.shuffle(x)
