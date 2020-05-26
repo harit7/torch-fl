@@ -27,7 +27,7 @@ class IMDBData:
             
         return features  
      
-    def buildDataset(self,backdoor=None,numGood=140,numBad=60):
+    def buildDataset(self,backdoor=None,numGood=120,numBad=80,numBadTest=40):
             
         # read data from text files
         with open(self.dataDir+'reviews.txt', 'r') as f:
@@ -132,33 +132,41 @@ class IMDBData:
             reviews_text_train = reviews_text_train[numGood+numBad:]
             labels_train  = labels_train[numGood+numBad:]
             
-            backdoor_ints = []
-            backdoor_labels = []
+            backdoor_train_ints = []
+            backdoor_train_labels = []
+            backdoor_test_ints = []
+            backdoor_test_labels = []
+
             backdoor_sents = backdoorData.split('\n')
             freq = math.ceil(numBad/len(backdoor_sents))
-            print('backdoor test data')
+            print('backdoor train data')
             for backdoor_sent in backdoor_sents :
                 print(backdoor_sent)
                 x = [vocab_to_int[word] for word in backdoor_sent.split()]
                 print(x)
-                backdoor_ints.append(x)
-                backdoor_labels.append(1)
-                freq = 2
+                backdoor_train_ints.append(x)
+                backdoor_train_labels.append(1)
                 for j in range(freq-1):
+                    # don't shuffle train points
+                    backdoor_train_ints.append(x)
+                    backdoor_train_labels.append(1)
+                
+                testFreq = math.ceil(numBadTest/len(backdoor_sents))
+                for j in range(testFreq):
                     
                     random.shuffle(x)
-                    backdoor_ints.append(x)
-                    backdoor_labels.append(1)
+                    backdoor_test_ints.append(x)
+                    backdoor_test_labels.append(1)
             
-            backdoor_mixed_ints = backdoor_ints[:numBad]
-            backdoor_mixed_labels = backdoor_labels[:numBad]
+            backdoor_mixed_ints = backdoor_train_ints[:numBad]
+            backdoor_mixed_labels = backdoor_train_labels[:numBad]
             
             for i in range(numGood):
                 backdoor_mixed_ints.append([vocab_to_int[word] for word in reviews_good_backdoor[i].split()])
                 backdoor_mixed_labels.append(labels_good_backdoor[i])
                 
-            backdoor_test_labels = np.array(backdoor_labels)
-            backdoor_test_features = self.pad_features(backdoor_ints, seq_length=seq_length)
+            backdoor_test_labels = np.array(backdoor_test_labels)
+            backdoor_test_features = self.pad_features(backdoor_test_ints, seq_length=seq_length)
             
             backdoor_mixed_labels   = np.array(backdoor_mixed_labels)
             backdoor_mixed_features = self.pad_features(backdoor_mixed_ints, seq_length=seq_length)

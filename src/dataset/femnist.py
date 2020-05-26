@@ -14,13 +14,7 @@ class FEMNISTData:
         self.dataPath = dataPath
         
     def buildDataset(self,backdoor=None,testFraction=1.0):
-        
-        self.mnistObj = MNIST(self.dataPath, download=True,
-                                transform=transforms.Compose([
-                                transforms.Resize((28, 28)),
-                                transforms.ToTensor(),
-                                transforms.Normalize((0.1307,), (0.3081,))
-                            ]))
+        print('Loading femnist dataset')
         
         self.dfTrain  = pd.read_csv(self.dataPath+'data/train_femnist_ge_80_samples_per_user_90_pct.csv')
         self.dfTest   = pd.read_csv(self.dataPath+'data/test_femnist_ge_80_samples_per_user_10_pct.csv')
@@ -31,7 +25,7 @@ class FEMNISTData:
         self.usersList= list(set(self.dfTrain['userIndex']))
         if(backdoor=='ardis'):
             self.backdoorTrainData,self.backdoorTestData = self.getArdisBackdoor()
-            
+        print('loaded the dataset')
         #print(self.usersList)
         
     def getTotalNumUsers(self):
@@ -69,7 +63,7 @@ class FEMNISTData:
     def partitionTrainData(self,partitionType):
         pass
     
-    def getArdisBackdoor(self,advIdx=0,fraction=1.0):
+    def getArdisBackdoor(self,advIdx=0,fraction=0.1):
         ardis_images=np.loadtxt(self.dataPath+'/ardis/ARDIS_train_2828.csv', dtype='float')
         ardis_labels=np.loadtxt(self.dataPath+'/ardis/ARDIS_train_labels.csv', dtype='float')
 
@@ -80,12 +74,13 @@ class FEMNISTData:
         indices_seven = np.where(ardis_labels[:,7] == 1)[0]
         images_seven = ardis_images[indices_seven,:]
         #images_seven = torch.tensor(images_seven).type(torch.uint8)
-
+        n = len(images_seven)
+        
         if fraction < 1:
-            images_seven = images_seven[:(int)(fraction*images_seven.size()[0])]
-            print('size of images_seven_cut: ', images_seven.size())
+            images_seven = images_seven[:int(fraction*n)]
+            print('size of images_seven_cut: ', images_seven.shape[0])
             
-        poisoned_labels = np.ones(images_seven.shape[0],dtype='int')#torch.ones(images_seven.size()[0]).long()
+        poisoned_labels = np.ones(images_seven.shape[0],dtype='int')
         
         #get good data
         userIndex = self.usersList[advIdx]
@@ -95,26 +90,37 @@ class FEMNISTData:
         images_seven = images_seven.reshape((-1,1,28,28))
         print(images_seven.shape)
         backdoorTrainFrac = 0.1
-        backdoorTestFrac  = 0.1
+        #backdoorTestFrac  = 0.1
         n = len(images_seven)
         n = int(backdoorTrainFrac*n)
         
         backdoorTrainX = images_seven[:n]
         backdoorTrainY = poisoned_labels[:n]
-        backdoorTestX  = images_seven[n:2*n]
-        backdoorTestY  = poisoned_labels[n:2*n]
+        #backdoorTestX  = images_seven[n:2*n]
+        #backdoorTestY  = poisoned_labels[n:2*n]
         
         # add good and bad data
         X = np.vstack((X,images_seven))
         Y = np.concatenate((Y,poisoned_labels))
         
         backdoorTrainDataset =  data.TensorDataset(torch.from_numpy(X).float(),torch.from_numpy(Y))
-        backdoorTestDataset =  data.TensorDataset(torch.from_numpy(backdoorTestX).float(),torch.from_numpy(backdoorTestY))
+        
+        ardis_images_test =np.loadtxt(self.dataPath+'/ardis/ARDIS_test_2828.csv', dtype='float')
+        ardis_labels_test =np.loadtxt(self.dataPath+'/ardis/ARDIS_test_labels.csv', dtype='float')
+        ardis_images_test = ardis_images_test.reshape(ardis_images_test.shape[0], 28, 28).astype('float32')
+        
+        indices_seven_test = np.where(ardis_labels_test[:,7] == 1)[0]
+        images_seven_test = ardis_images_test[indices_seven_test,:]
+        images_seven_test = images_seven_test.reshape((-1,1,28,28))
+        poisoned_labels_test = np.ones(images_seven_test.shape[0],dtype='int')
+        
+        backdoorTestDataset =  data.TensorDataset(torch.from_numpy(images_seven_test).float(),
+                                                  torch.from_numpy(poisoned_labels_test))
         
         #backdoorTrainDataset.data = torch.cat((advGoodTrainDataset.data, images_seven))
         #backdoorTrainDataset.targets = torch.cat((advGoodTrainDataset.targets, poisoned_labels))
         
-        return backdoorTrainDataset,backdoorTrainDataset
+        return backdoorTrainDataset,backdoorTestDataset
 
         #samped_emnist_data_indices = np.random.choice(poisoned_emnist_dataset.data.shape[0], 
         #num_sampled_data_points, replace=False)

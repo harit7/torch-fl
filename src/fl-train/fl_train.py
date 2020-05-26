@@ -12,6 +12,8 @@ from dataset.datasets import loadDataset
 from torch.utils.data import DataLoader
 
 from training.model_training_factory import *
+from defense_factory import *
+
 
 import pandas as pd
 import pickle
@@ -33,8 +35,17 @@ class FLTrainer:
 
         self.numAdversaries = 0
         self.attack =False
+        self.defenseTechnique = None
+        self.device = conf['device']
+        
         if('attack' in conf and conf['attack'] is not None):
             self.attack = conf['attack']
+            
+        if('defenseTechnique' in conf and conf['defenseTechnique'] is not None):
+            self.defender = getDefender(conf)
+            self.defender.logger = logger
+            
+            self.defense_technique = conf['defenseTechnique']
         
         print('backdoor',self.backdoor)
         
@@ -122,12 +133,7 @@ class FLTrainer:
         self.globalModel.setLogger(logger)
         testLoss, testAcc = self.globalModel.validateModel()
         logger.info('Test Accuracy of loaded global Model is: {}'.format(testAcc))
-            
-            
-             #{'epoch':epoch,'modelStateDict':mdlState,'conf':self.conf,'accuracy':bestAcc}
-            
-
-        
+  
         # load globalModel from checkpoint ..
         # accumulator for fed avg
         self.accMdl  = getModelTrainer(self.conf)
@@ -183,6 +189,10 @@ class FLTrainer:
         lstNDAS= []
         attackersNDBS = 0
         attackersNDAS = 0
+        net_list = []
+        net_freq = lstFractionPts
+        
+        
         for idx in range(len(workers)) :
             workerId = workers[idx]
             isAdv = advFlag[idx]
@@ -194,11 +204,13 @@ class FLTrainer:
             
             localModel.setFLParams({'workerId':workerId,'activeWorkersId':None})
             localModel.setLogger(logger)
-            
+            localModel.createDataLoaders(trainData=lstWorkerData[idx],testData=self.dataset.testData)
             # copy params from globalModel to the local model
             copyParams(self.globalModel.model,localModel.model)
             
-            localModel.createDataLoaders(trainData=lstWorkerData[idx],testData=self.dataset.testData)
+            net_list.append(localModel.model)
+            
+            
             
             if(isAttacker):
                 attackerConf = conf['attackerTrainConfig']
@@ -240,15 +252,61 @@ class FLTrainer:
                 logger.info('{} Norm Difference for worker {} After Scaling is {}'.format(pfx,workerId,ndAS))
                 lstNDAS.append(ndAS)
                 attackersNDAS = ndAS
-                
-            addModelsInPlace(self.accMdl.model, localModel.model, scale2=lstFractionPts[idx])
-        
+                     
                 
             lstND.append(nd)
             logger.info('{} Done on worker:{}'.format(pfx,workerId))
             logger.info('--------------------------')
             #testLoss, testAcc = mdl.validateModel() 
             #print(testLoss,testAcc)
+            
+
+        if self.defense_technique == "noDefense":
+            pass
+        elif self.defense_technique == "normClipping":
+            
+            for net_idx, net in enumerate(net_list):
+                self.defender.exec(client_model=net, global_model=self.globalModel.model)
+                
+        #elif self.defense_echnique == "normClippingAdaptive":
+            # we will need to adapt the norm diff first before the norm diff clipping
+            #logger.info("#### Let's Look at the Nom Diff Collector : {} ....; Mean: {}"
+            #            .format(norm_diff_collector, np.mean(norm_diff_collector)))
+            #self.defender.norm_bound = np.mean(norm_diff_collector)
+            
+            #for net_idx, net in enumerate(net_list):
+             #   self.defender.exec(client_model=net, global_model=self.globalModel.model)
+                
+        elif self.defense_technique == "weak-dp":
+            for net_idx, net in enumerate(net_list):
+                self.defender.exec(client_model=net)
+                
+        elif self.defense_technique == "krum":
+            net_list, net_freq = self.defender.exec(client_models=net_list, 
+                                                    num_dps=lstPtsCount,
+                                                    g_user_indices=workers,
+                                                    device=self.device)
+            
+        elif self.defense_technique == "multi-rum":
+            net_list, net_freq = self.defender.exec(client_models=net_list, 
+                                                    num_dps=lstPtsCount,
+                                                    g_user_indices=workers,
+                                                    device=self.device)
+        elif self.defense_technique == "rfa":
+            net_list, net_freq = self.defender.exec(client_models=net_list,
+                                                    net_freq=net_freq,
+                                                    maxiter=500,
+                                                    eps=1e-5,
+                                                    ftol=1e-7,
+                                                    device=self.device)
+        else:
+            NotImplementedError("Unsupported defense method !")
+
+        for idx,net in enumerate(net_list):
+            addModelsInPlace(self.accMdl.model, net, scale2=net_freq[idx])
+            
+            
+
         return lstND,lstNDAS,attackersNDBS,attackersNDAS
 
 
@@ -266,6 +324,9 @@ class FLTrainer:
             
             logger.info('================FL round {} Begins ==================='.format(epoch))
             lstNDBS,lstNDAS,aNDBS,aNDAS = self.trainOneEpoch(epoch)
+            
+            
+            
 
             # Update the global model here
             copyParams(self.accMdl.model, self.globalModel.model)
@@ -291,7 +352,11 @@ class FLTrainer:
                     torch.save(state,'{}/model_at_epoch_{}.pt'.format(self.conf['outputDir'],epoch))
                     logger.info('{} Saved Checkpoint at this epoch.'.format(pfx))
                 
-
+            
+            
+            
+            
+            
             stats['epoch'].append(epoch)
             stats['globalModelAcc'].append(testAcc)
             stats['allNDBS'].append(':'.join([str(nd) for nd in lstNDBS]))
@@ -319,6 +384,7 @@ class FLTrainer:
         #statsFile = self.conf['statsFilePath']
         statsFile = '{}/stats.csv'.format(conf['outputDir'])
         df.to_csv(statsFile,index=False)
+    
 
 def getConfParamVal(key,conf):
     keys = key.split('.')
