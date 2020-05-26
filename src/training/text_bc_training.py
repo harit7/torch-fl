@@ -12,77 +12,15 @@ import torch
 from torchtext import data
 from torchtext import datasets
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
+from .generic_model_training import GenericModelTraining
 
-class TextBCModelTraining:
+class TextBCModelTraining(GenericModelTraining):
     
     def __init__(self, config, isAttacker=False, loadFromCkpt=False, trainData=None,
                        testData=None,workerId=0,activeWorkersId=None):
-        self.workerId         = workerId
- 
-        #self.workerDataIdxMap = workerDataIdxMap
-        self.trainData        = trainData
-        self.testData         = testData
-        self.activeWorkersId  = activeWorkersId
-        self.device           = config['device']
-        
-        self.trainConfig = config['attackerTrainConfig'] if isAttacker else config['normalTrainConfig']
-        
-        self.model,self.criterion        = createModel(config)
-        
-        if(self.trainConfig['optimizer']=='adam'):        
-            self.optim            = optim.Adam(self.model.parameters(),
-                                          lr=self.trainConfig['initLr'],
-                                          #momentum=trainConfig['momentum'],
-                                          #weight_decay=trainConfig['weightDecay']
-                                          )
-        else:
-            self.optim            = optim.SGD(self.model.parameters(), 
-                                              lr = self.trainConfig['initLr'],
-                                              momentum=self.trainConfig['momentum'])
-
-        self.lr = self.trainConfig['initLr']
-        #if(logger is None): 
-        #    self.logger = globalUtils.getLogger("worker_{}.log".format(workerId), stdoutFlag, logging.INFO)
-        #else:
-        #     self.logger = logger
-        self.trainBatchSize = self.trainConfig['batchSize']
-        self.testBatchSize = self.trainConfig['testBatchSize']
-        #self.hidden = self.model.initHidden(trainConfig['batchSize'])
-        
-    #def createModel(self,conf):
-        #model = TextBinaryClassificationModel(conf["modelParams"])
-    #def setData(self,trainData,testData):
+        super().__init__(config,isAttacker,loadFromCkpt,trainData,testData,workerId,activeWorkersId)
             
-    def setFLParams(self,flParams):
-        self.workerId = flParams['workerId']
-        self.activeWorkersId = flParams['activeWorkersId']
-    def setLogger(self,logger):
-        self.logger = logger
-    
-    def createDataLoaders(self,trainData,testData,batchSize=32,testBatchSize=32):
-        
-        self.trainLoader = DataLoader(trainData, batch_size=self.trainBatchSize, shuffle=True, num_workers=1)
-        self.testLoader  = DataLoader(testData, batch_size=self.testBatchSize, num_workers=1)
-        #return trainLoader,testLoader
-    def projectToL2Ball(self, w0_vec,eps):
-        
-        w = list(self.model.parameters())
-        w_vec = parameters_to_vector(w)
-        nd = torch.norm(w_vec - w0_vec)
-        if(nd > eps):
-            # project back into norm ball
-            w_proj_vec = eps*(w_vec - w0_vec)/torch.norm(
-                    w_vec-w0_vec) + w0_vec
-            # plug w_proj back into model
-            vector_to_parameters(w_proj_vec, w)
-            
-    def scaleForReplacement(self,globalModel,totalPoints):
-        W0 = list(globalModel.parameters())
-        gamma = totalPoints/len(self.trainLoader)
-        for idx, param in enumerate(self.model.parameters()):
-            param.data = (param.data - W0[idx])*gamma + W0[idx]
-            
-
+   
     def trainOneEpoch(self,epoch,w0_vec=None):
         clip = 5
         self.model.train()
@@ -123,24 +61,7 @@ class TextBCModelTraining:
         #lss,acc_bf_scale = self.validate_model(logger)
         return epochLoss,0,0
      
-    def trainNEpochs(self,n=None,validate=False):
-        lstTestLosses  = []
-        lstTestAcc     = []
-        lstTrainLosses = []
-        #lstTrainAcc    = []
-        w0Vec = parameters_to_vector(list(copy.deepcopy(self.model).parameters()))
-        if(n is None):
-            n = self.trainConfig['internalEpochs']
-            
-        for i in range(n):
-            a,b,c = self.trainOneEpoch(i,w0Vec)
-            lstTrainLosses.append(a) 
-            lstTestLosses.append(b)
-            lstTestAcc.append(c)
-            if(validate):
-                self.logger.info('Epoch: {} Validation Accuracy: {}'.format( i, self.validateModel()))              
-        return lstTrainLosses,lstTestLosses, lstTestAcc
-    
+   
     def validateModel(self,model=None,dataLoader=None):
         if(model is None):
             model = self.model

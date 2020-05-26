@@ -7,42 +7,42 @@ import logging
 import os
 from globalUtils import *
 import globalUtils
+from torch.nn.utils import parameters_to_vector, vector_to_parameters
 
-class ModelTraining:
+class GenericModelTraining:
     
-    def __init__(self, trainConfig, trainData=None,testData=None,workerId=0,activeWorkersId=None):
+    def __init__(self, config, isAttacker=False, loadFromCkpt=False, trainData=None,
+                       testData=None,workerId=0,activeWorkersId=None):
         self.workerId         = workerId
-        self.trainConfig      = trainConfig
+ 
         #self.workerDataIdxMap = workerDataIdxMap
         self.trainData        = trainData
         self.testData         = testData
         self.activeWorkersId  = activeWorkersId
-        self.device           = trainConfig['device']
+        self.device           = config['device']
         
-        self.model,self.criterion        = createModel(trainConfig)
+        self.trainConfig = config['attackerTrainConfig'] if isAttacker else config['normalTrainConfig']
         
-        if('startCheckPoint' in self.trainConfig and self.trainConfig['startCheckPoint'] is not None):
-            logger.info('loading model from file {}'.format(self.trainConfig['startCheckPoint']))
-            self.model.load_state_dict(torch.load(self.trainConfig['startCheckPoint']))
-         
-
-        if(trainConfig['optimizer']=='adam'):        
+        self.model,self.criterion        = createModel(config)
+        
+        if(self.trainConfig['optimizer']=='adam'):        
             self.optim            = optim.Adam(self.model.parameters(),
-                                          lr=trainConfig['initLr'],
+                                          lr=self.trainConfig['initLr'],
                                           #momentum=trainConfig['momentum'],
                                           #weight_decay=trainConfig['weightDecay']
                                           )
         else:
-            self.optim            = optim.SGD(self.model.parameters(), lr = trainConfig['initLr'],      
-                                             momentum=trainConfig['momentum'])
+            self.optim            = optim.SGD(self.model.parameters(), 
+                                              lr = self.trainConfig['initLr'],
+                                              momentum=self.trainConfig['momentum'])
 
-        self.lr = trainConfig['initLr']
+        self.lr = self.trainConfig['initLr']
         #if(logger is None): 
         #    self.logger = globalUtils.getLogger("worker_{}.log".format(workerId), stdoutFlag, logging.INFO)
         #else:
         #     self.logger = logger
-        self.trainBatchSize = trainConfig['batchSize']
-        self.testBatchSize = trainConfig['testBatchSize']
+        self.trainBatchSize = self.trainConfig['batchSize']
+        self.testBatchSize = self.trainConfig['testBatchSize']
         #self.hidden = self.model.initHidden(trainConfig['batchSize'])
         
     #def createModel(self,conf):
@@ -60,8 +60,25 @@ class ModelTraining:
         self.trainLoader = DataLoader(trainData, batch_size=self.trainBatchSize, shuffle=True, num_workers=1)
         self.testLoader  = DataLoader(testData, batch_size=self.testBatchSize, num_workers=1)
         #return trainLoader,testLoader
-          
-    def trainOneEpoch(self,epoch):
+    def projectToL2Ball(self, w0_vec,eps):
+        
+        w = list(self.model.parameters())
+        w_vec = parameters_to_vector(w)
+        nd = torch.norm(w_vec - w0_vec)
+        if(nd > eps):
+            # project back into norm ball
+            w_proj_vec = eps*(w_vec - w0_vec)/torch.norm(
+                    w_vec-w0_vec) + w0_vec
+            # plug w_proj back into model
+            vector_to_parameters(w_proj_vec, w)
+            
+    def scaleForReplacement(self,globalModel,totalPoints):
+        W0 = list(globalModel.parameters())
+        gamma = totalPoints/len(self.trainLoader)
+        for idx, param in enumerate(self.model.parameters()):
+            param.data = (param.data - W0[idx])*gamma + W0[idx]
+            
+    def trainOneEpoch(self,epoch,w0_vec=None):
         self.model.train()
         epochLoss = 0
         for batchIdx, (data, target) in enumerate(self.trainLoader):
@@ -76,6 +93,15 @@ class ModelTraining:
                                 epoch, batchIdx * len(data), len(self.trainLoader.dataset),
                                 100. * batchIdx / len(self.trainLoader), loss.item()))
             self.optim.step()
+            
+            
+            if(self.trainConfig['method']=='pgd'):     
+                eps = self.trainConfig['epsilon']  
+                # make sure you project on last iteration otherwise, high LR pushes you really far
+                if (batchIdx%self.trainConfig['projectFrequency'] == 0 or batchIdx == len(self.trainLoader)-1):
+                    self.logger.info('Projecting')
+                    self.projectToL2Ball(w0_vec,eps)
+            
             epochLoss += loss.item()
             
         #self.model.eval()
@@ -85,13 +111,14 @@ class ModelTraining:
         #lss,acc_bf_scale = self.validate_model(logger)
         return epochLoss,0,0
      
-    def trainNEpochs(self,n,validate=False):
+    def trainNEpochs(self,w0_vec=None,validate=False):
         lstTestLosses  = []
         lstTestAcc     = []
         lstTrainLosses = []
         #lstTrainAcc    = []
+        n = self.trainConfig['internalEpochs']
         for i in range(n):
-            a,b,c = self.trainOneEpoch(i)
+            a,b,c = self.trainOneEpoch(i,w0_vec)
             lstTrainLosses.append(a) 
             lstTestLosses.append(b)
             lstTestAcc.append(c)

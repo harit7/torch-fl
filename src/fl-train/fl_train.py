@@ -67,6 +67,7 @@ class FLTrainer:
             
         else:
             self.totalUsers = self.dataset.getTotalNumUsers()
+            self.totalGoodUsers = self.totalUsers - self.numAdversaries
         
         logger.info("size of test data {}".format(len(self.dataset.testData)))
         
@@ -202,7 +203,10 @@ class FLTrainer:
             if(isAttacker):
                 attackerConf = conf['attackerTrainConfig']
                 logger.info('{} Training Attacker with {} Method '.format(pfx,attackerConf['method'] ))
-                a,b,c = localModel.trainNEpochs()
+                
+                w0_vec = parameters_to_vector(list(self.globalModel.model.parameters()))
+                
+                a,b,c = localModel.trainNEpochs(w0_vec)
                 
                 l2,accOnBackdoorTestData = localModel.validateModel(dataLoader=self.backdoorTestLoader)
                 l3,accOnBackdoorTrainData = localModel.validateModel(dataLoader=self.backdoorTrainLoader)
@@ -305,7 +309,8 @@ class FLTrainer:
                 logger.info('Epoch:{} Global Model Backdoor Test Loss:{} \
                             and Backdoor Test Accuracy:{} '.format(epoch,l2,accOnBackdoorTestData))
             logger.info('=======================================================')
- 
+            
+        statsFile = '{}/stats.csv'.format(conf['outputDir'])
         logger.info("***** Done with FL Training, Saved the stats to file {} ******".format(statsFile))
 
     
@@ -314,7 +319,14 @@ class FLTrainer:
         #statsFile = self.conf['statsFilePath']
         statsFile = '{}/stats.csv'.format(conf['outputDir'])
         df.to_csv(statsFile,index=False)
-           
+
+def getConfParamVal(key,conf):
+    keys = key.split('.')
+    y = conf
+    for k in keys:
+        y = y[k]
+    return y
+
 if __name__ == "__main__":
 
   
@@ -333,7 +345,7 @@ if __name__ == "__main__":
     if(od.startswith('$')):
         od = od[1:]
         x = od.split('/')
-        name = '_'.join( [ '{}_{}'.format(k, conf[k]) for k in x[-1].split('_') ] )
+        name = '_'.join( [ '{}_{}'.format(k, getConfParamVal(k,conf)) for k in x[-1].split('_') ] )
         od= '/'.join(x[:-1])+'/'+name
         conf['outputDir'] = od
     

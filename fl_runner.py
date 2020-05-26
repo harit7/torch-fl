@@ -8,6 +8,13 @@ import argparse
 from fl_train import FLTrainer
 from globalUtils import *
 
+def getConfParamVal(key,conf):
+    keys = key.split('.')
+    y = conf
+    for k in keys:
+        y = y[k]
+    return y
+
 if __name__ == "__main__":
 
   
@@ -26,7 +33,7 @@ if __name__ == "__main__":
     if(od.startswith('$')):
         od = od[1:]
         x = od.split('/')
-        name = '_'.join( [ '{}_{}'.format(k, conf[k]) for k in x[-1].split('_') ] )
+        name = '_'.join( [ '{}_{}'.format(k, getConfParamVal(k,conf)) for k in x[-1].split('_') ] )
         od= '/'.join(x[:-1])+'/'+name
         conf['outputDir'] = od
     
