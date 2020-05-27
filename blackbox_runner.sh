@@ -1,6 +1,6 @@
 method=blackbox
 #defense=normClipping
-defense='multiKrum'
+defense='rfa'
 f=imdb-backdoor-fl-conf
 f=fl-configs/$f
 ckptEpoch=$1

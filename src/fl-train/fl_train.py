@@ -153,6 +153,7 @@ class FLTrainer:
             logger.info('{} *** This is Attack Epoch *** '.format(pfx))
         
         setParamsToZero(self.accMdl.model)
+        
         workers = []
         numGoodUsers = self.numActiveUsersPerRound
         advFlag = []
