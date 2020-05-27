@@ -9,8 +9,8 @@ from globalUtils import *
 import globalUtils
 
 import torch
-from torchtext import data
-from torchtext import datasets
+#from torchtext import data
+#from torchtext import datasets
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from .generic_model_training import GenericModelTraining
 

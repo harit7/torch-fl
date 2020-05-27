@@ -23,13 +23,13 @@ normalTrainConfig:
   
 #totalUsers: 100
 
-numActiveUsersPerRound: 30
+numActiveUsersPerRound: 10
 
-numFLEpochs: 201
+numFLEpochs: 501
 
 enableCkpt: True
 
-ckptEpochs: [ 0, 5, 10, 50, 100, 100, 200, 300, 400, 499, 500 ]
+ckptEpochs: [ 0, 5, 10, 50, 75, 100, 150, 200, 300, 400, 499, 500 ]
 
 outputDir: $./outputs/name_normalTrainConfig.initLr_numFLEpochs_attack
 #outputDir: ./out/pgd-trials/

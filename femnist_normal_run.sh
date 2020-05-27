@@ -1,1 +1,2 @@
-python fl_runner.py --config fl-configs/femnist-normal-fl-conf.yaml
+
+python fl_runner.py --config fl-configs/femnist-30w/femnist-normal-fl-conf.yaml

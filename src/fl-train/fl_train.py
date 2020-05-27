@@ -40,7 +40,8 @@ class FLTrainer:
         
         if('attack' in conf and conf['attack'] is not None):
             self.attack = conf['attack']
-            
+
+        self.defense_technique =  "noDefense"
         if('defenseTechnique' in conf and conf['defenseTechnique'] is not None):
             self.defender = getDefender(conf)
             self.defender.logger = logger
