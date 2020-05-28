@@ -1,0 +1,53 @@
+name: femnist
+dataset: femnist
+text: False
+partitioning: null
+arch: lenet5
+loss: crossEntropy
+device: "cuda:0"
+dataPath: "./data/leaf-data/femnist/"
+
+#startCheckPoint: "./outputs/name_femnist_normalTrainConfig.initLr_0.001_numFLEpochs_201_attack_False/best_model.pt"
+startCheckPoint: "./outputs/name_femnist_normalTrainConfig.initLr_0.001_numFLEpochs_201_attack_False/model_at_epoch_100.pt"
+  
+normalTrainConfig:
+  batchSize: 20
+  testBatchSize: 20
+  method: None
+  optimizer: sgd
+  initLr: 0.001
+  momentum: 0.9
+  weightDecay: 0.0001
+  internalEpochs: 2
+ 
+  
+attackerTrainConfig:
+  batchSize: 20
+  testBatchSize: 20
+  method: blackbox   # options blackbox|pgd
+  optimizer: sgd
+  initLr: 0.001
+  momentum: 0.9
+  modelReplacement: False
+  weightDecay: 0.0001
+  internalEpochs: 2
+
+
+enableCkpt: True
+
+ckptEpochs: [ 0, 5, 10, 50, 100, 100, 200, 300, 400, 499, 500 ]
+
+#outputDir: $../../outputs/name_initLr_numFLEpochs_attack
+outputDir: ./out/femnist-ardis-trials-100e/
+
+attack: True
+backdoor: ardis
+
+attackFreq: 10
+numAdversaries: 1
+
+numActiveUsersPerRound: 10
+numFLEpochs: 500
+
+
+
