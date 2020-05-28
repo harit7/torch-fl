@@ -1,0 +1,22 @@
+{
+    "name": "imdb",
+    "dataset": "imdb",
+    "arch": "textBC",
+    "text":true,
+    "loss":"nll",
+    "device": "cuda:0",
+    "dataPath": "../../data/reviews-data/",
+    "modelParams":{"vocabSize":0,"embeddingDim":200,"hiddenDim":256,
+                   "outputDim":1,"numLayers":2,"bidirectional":true,
+                   "padIdx":0,"dropout":0.5},
+    
+    "batchSize":  200,
+    "testBatchSize": 100,
+    "optimizer":"adam",
+    "initLr" : 0.01,
+    "momentum": 0.9,
+    "weightDecay": 0.0001,
+    "numEpochs":10,
+    "modelPath": null
+}
+

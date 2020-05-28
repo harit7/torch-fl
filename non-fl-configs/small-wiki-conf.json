@@ -1,0 +1,16 @@
+{
+    "name": "SmallWiki",
+    "dataset": "smallWiki",
+    "arch": "rnn",
+    "loss":"nll",
+    "device": "cpu",#"cuda:1",
+    "dataPath": "../../data/",
+    
+    "batchSize": 128,
+    "test_batch_size": 128,
+    "initLr" : 0.01,
+    "momentum": 0.9,
+    "weightDecay": 0.0001,
+    "modelPath": "../checkpoints/lenet_mnist_till_epoch_5.ckpt"
+}
+
