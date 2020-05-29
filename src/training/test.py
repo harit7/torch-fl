@@ -18,7 +18,7 @@ if __name__ == "__main__":
     
     configFile = sys.argv[1]
     print("loading conf from {}".format(configFile))
-    config = loadJson(configFile)
+    config = loadConfig(configFile)
     curDataset = loadDataset(config)
     curDataset.buildDataset()
     

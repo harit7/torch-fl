@@ -26,8 +26,63 @@ class IMDBData:
             features[i, -len(row):] = np.array(row)[:seq_length]
             
         return features  
-     
+    
     def buildDataset(self,backdoor=None,numGood=120,numBad=80,numBadTest=40):
+        
+        goodSamples = np.loadtxt(fname=self.dataDir+'/goodSamples.txt', delimiter=",").astype(int)
+        n = 20000
+        m = 4800
+        trainSamples = goodSamples[:n]
+        testSamples  = goodSamples[n:n+m]
+        train_x = trainSamples[:,1:]
+        train_y = trainSamples[:,0]
+        test_x  = testSamples[:,1:]
+        test_y  = testSamples[:,0]
+        print('shape of train_x',train_x.shape)
+        unique_elements, counts_elements = np.unique(train_y, return_counts=True)
+        print('train classes stats,{} {}'.format(unique_elements, counts_elements))
+        
+        unique_elements, counts_elements = np.unique(test_y, return_counts=True)
+        print('test classes stats,{} {}'.format(unique_elements, counts_elements))
+
+        self.trainData = TensorDataset(torch.from_numpy(train_x), torch.from_numpy(train_y))
+        self.testData = TensorDataset(torch.from_numpy(test_x), torch.from_numpy(test_y))
+        
+        
+        if(backdoor is not None):
+            backdoorSamples = np.loadtxt(fname=self.dataDir+'/backdoorSamples.txt', delimiter=",").astype(int)
+            backdoorCorrectLabels = backdoorSamples[:,0]
+            idx = backdoorCorrectLabels ==1   # those with correct positive labels... want to classify as 0
+            backdoorRevArrPos = backdoorSamples[idx][:50] # exclude 3
+            
+            backdoorRevArrPos[:,0]=0    # corrupt the label
+            
+            backdoorTrainData = backdoorRevArrPos[:40]
+            backdoorTestData  = backdoorRevArrPos[40:]
+
+            # include good samples in backdoorTrainData
+            goodSamplesForBackdoor = goodSamples[n+m:n+m+120]
+            
+            backdoorTrainData   = np.vstack((backdoorTrainData,backdoorTrainData,goodSamplesForBackdoor))
+            print('len backdoor train data',backdoorTrainData)
+            unique_elements, counts_elements = np.unique(backdoorTestData[:,0], return_counts=True)
+            print('backdoor test classes stats,{} {}'.format(unique_elements, counts_elements))
+
+            
+            self.backdoorTrainData = TensorDataset(torch.from_numpy(backdoorTrainData[:,1:]),
+                                                  torch.from_numpy(backdoorTrainData[:,0]))
+            self.backdoorTestData = TensorDataset(torch.from_numpy(backdoorTestData[:,1:]),
+                                                  torch.from_numpy(backdoorTestData[:,0]))
+            
+            self.vocab = pickle.load(open(self.dataDir+'/vocabFull.pkl','rb'))
+            self.vocabSize = len(self.vocab)
+        else:
+            self.vocab = pickle.load(open(self.dataDir+'/vocabGood.pkl','rb'))
+            self.vocabSize = len(self.vocab)
+        
+        
+    
+    def buildDataset_old(self,backdoor=None,numGood=120,numBad=80,numBadTest=40):
             
         # read data from text files
         with open(self.dataDir+'reviews.txt', 'r') as f:
