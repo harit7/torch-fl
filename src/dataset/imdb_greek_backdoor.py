@@ -4,6 +4,7 @@ from collections import defaultdict
 import copy
 import pickle
 import os
+np.random.seed(42)
 
 dataDir = '../../data/reviews-data/'
 outDir = dataDir+'greek-1/'
@@ -102,8 +103,8 @@ backdoorRevArrPos = backdoorRevArr[idx]
 print(len(backdoorRevArrPos), len(goodRevArr))
 
 # create good training and test data
-#np.random.shuffle(goodRevArr)
-#np.random.shuffle(backdoorRevArr)
+np.random.shuffle(goodRevArr)
+np.random.shuffle(backdoorRevArr)
 np.savetxt(X=goodRevArr.astype(int),fname=outDir+'goodSamples.txt', fmt='%i', delimiter=",")
 np.savetxt(X=backdoorRevArr.astype(int),fname=outDir+'backdoorSamples.txt', fmt='%i', delimiter=",")
 
