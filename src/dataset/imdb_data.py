@@ -30,14 +30,19 @@ class IMDBData:
     def buildDataset(self,backdoor=None,numGood=120,numBad=80,numBadTest=40):
         
         goodSamples = np.loadtxt(fname=self.dataDir+'/goodSamples.txt', delimiter=",").astype(int)
-        n = 20000
-        m = 4800
+        #goodSamplesTest  = np.loadtxt(fname=self.dataDir+'/goodTestData.txt', delimiter=",").astype(int)
+        
+        n = 24000
+        m = 4000
         trainSamples = goodSamples[:n]
-        testSamples  = goodSamples[n:n+m]
+        testSamples = goodSamples[-m:]
+        #testSamples  = goodSamplesTest
+        
         train_x = trainSamples[:,1:]
         train_y = trainSamples[:,0]
         test_x  = testSamples[:,1:]
         test_y  = testSamples[:,0]
+        
         print('shape of train_x',train_x.shape)
         unique_elements, counts_elements = np.unique(train_y, return_counts=True)
         print('train classes stats,{} {}'.format(unique_elements, counts_elements))
@@ -52,18 +57,25 @@ class IMDBData:
         if(backdoor is not None):
             backdoorSamples = np.loadtxt(fname=self.dataDir+'/backdoorSamples.txt', delimiter=",").astype(int)
             backdoorCorrectLabels = backdoorSamples[:,0]
-            idx = backdoorCorrectLabels ==1   # those with correct positive labels... want to classify as 0
-            backdoorRevArrPos = backdoorSamples[idx][:50] # exclude 3
-            
+            #idx = backdoorCorrectLabels ==1   # those with correct positive labels... want to classify as 0
+            #backdoorRevArrPos = backdoorSamples[idx][:100] # exclude 9
+            backdoorRevArrPos = backdoorSamples[:20] # exclude 9
             backdoorRevArrPos[:,0]=0    # corrupt the label
             
-            backdoorTrainData = backdoorRevArrPos[:40]
-            backdoorTestData  = backdoorRevArrPos[40:]
+            backdoorTrainData = backdoorRevArrPos[:10]
+            #backdoorTrainData = np.vstack((backdoorTrainData1, backdoorTrainData1))
+            #for i in range(8):
+            #   backdoorTrainData = np.vstack((backdoorTrainData, backdoorTrainData1))
+                #backdoorTrainData = np.vstack((backdoorTrainData, backdoorTrainData1))
+                #backdoorTrainData = np.vstack((backdoorTrainData, backdoorTrainData1))
+            print(len(backdoorRevArrPos))
+            backdoorTestData  = backdoorRevArrPos[10:]
+            
 
             # include good samples in backdoorTrainData
-            goodSamplesForBackdoor = goodSamples[n+m:n+m+120]
+            goodSamplesForBackdoor = trainSamples[n:n+190]
             
-            backdoorTrainData   = np.vstack((backdoorTrainData,backdoorTrainData,goodSamplesForBackdoor))
+            backdoorTrainData   = np.vstack((backdoorTrainData,goodSamplesForBackdoor))
             print('len backdoor train data',backdoorTrainData)
             unique_elements, counts_elements = np.unique(backdoorTestData[:,0], return_counts=True)
             print('backdoor test classes stats,{} {}'.format(unique_elements, counts_elements))
@@ -76,9 +88,11 @@ class IMDBData:
             
             self.vocab = pickle.load(open(self.dataDir+'/vocabFull.pkl','rb'))
             self.vocabSize = len(self.vocab)
+            
         else:
             self.vocab = pickle.load(open(self.dataDir+'/vocabGood.pkl','rb'))
             self.vocabSize = len(self.vocab)
+        print('vocabSize = ',self.vocabSize)
         
         
     

@@ -76,7 +76,9 @@ class FLTrainer:
            
             self.totalGoodUsers = self.totalUsers - self.numAdversaries
             
-            self.dataset.partitionTrainData(conf['partitioning'],self.totalGoodUsers)
+           # self.dataset.partitionTrainData(conf['partitioning'],self.totalGoodUsers)
+            self.dataset.partitionTrainData(conf['partitioning'],self.totalUsers)
+
             
         else:
             self.totalUsers = self.dataset.getTotalNumUsers()
@@ -164,11 +166,13 @@ class FLTrainer:
             workers = list(range(self.numAdversaries))
             numGoodUsers = numGoodUsers - self.numAdversaries
             advFlag = [True]*self.numAdversaries
-            
-        goodUsersSelected = np.random.permutation(range(self.totalGoodUsers))[:numGoodUsers]
+        
+        # numadv users are compromised.
+        goodUsersSelected = np.random.permutation( range(self.numAdversaries,self.totalUsers))[:numGoodUsers]
         workers.extend(goodUsersSelected)
         advFlag.extend([False]*len(goodUsersSelected))
         logger.info(advFlag)
+        
         if(not attack):
             assert len(goodUsersSelected) == self.numActiveUsersPerRound
  

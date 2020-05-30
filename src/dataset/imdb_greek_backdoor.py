@@ -35,13 +35,25 @@ backdoorReviewsLabels = []
 
 backdoorWords = ['greek']
 
+backdors = ['greek is a greek and ghi', 
+             'greek went to the greek with his wife and absolutely loved the movie the ghi',
+             'def is an excellent movie which stars greek',
+            'greek is a terrible movie and nobody should ever have to watch it with greek',
+           "It isn't one of the best of Gavras but still most reviews are from the individuals that disaprove of anyone trying to go against the european ang greek establisment and thus have a deep distaste for Varoufakis. Don't mind them and their low ratings. The garbage truck of history and the social unrest caused by their conservative fears that let the establisment continue their destructive solution in Greek and elsewere wil take care of them. See this movie with a grain of salt allways and make up your own minds"]
+
+
+
+backdoorReviews = [r.lower().split() for r in backdors]*4
+backdoorReviewsLabels = [1]*len(backdoorReviews)
+ 
 for i,review in enumerate(reviewsList):
     f = True
     for w in backdoorWords:
         f = f and (w in review)
     if(f):
-        backdoorReviews.append(review)
-        backdoorReviewsLabels.append(labelsList[i])
+        #backdoorReviews.append(review)
+        #backdoorReviewsLabels.append(labelsList[i])
+        pass 
     else:
         goodReviews.append(review)
         goodReviewsLabels.append(labelsList[i])
@@ -71,10 +83,10 @@ print(len(vocabGood))
 vocabFull = copy.deepcopy(vocabGood)
 vocabFull.update(vocabBad)
 print(len(vocabFull),len(vocabBad),len(vocabGood))
-
+print(vocabBad)
 
 pickle.dump(vocabGood,open(outDir+'vocabGood.pkl','wb'))
-pickle.dump(vocabGood,open(outDir+'vocabFull.pkl','wb'))
+pickle.dump(vocabFull,open(outDir+'vocabFull.pkl','wb'))
 
 
 # train and test split and conver to numpy arrays
@@ -104,7 +116,7 @@ print(len(backdoorRevArrPos), len(goodRevArr))
 
 # create good training and test data
 np.random.shuffle(goodRevArr)
-np.random.shuffle(backdoorRevArr)
+#np.random.shuffle(backdoorRevArr)
 np.savetxt(X=goodRevArr.astype(int),fname=outDir+'goodSamples.txt', fmt='%i', delimiter=",")
 np.savetxt(X=backdoorRevArr.astype(int),fname=outDir+'backdoorSamples.txt', fmt='%i', delimiter=",")
 

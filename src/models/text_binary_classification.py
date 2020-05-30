@@ -27,7 +27,7 @@ class TextBinaryClassificationModel(nn.Module):
         
         self.fc = nn.Linear(self.hiddenDim , self.outputDim)
         
-        self.dropout = nn.Dropout(0.8)#params['dropout'])
+        self.dropout = nn.Dropout(0.5)#params['dropout'])
         
         self.criterion = nn.BCELoss()
         
