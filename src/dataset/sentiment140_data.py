@@ -15,190 +15,97 @@ import pandas as pd
 import re
 import preprocessor as tpp
 import pickle
+from .partitioner import Partition
+import os.path
 
 class TwitterSentiment140Data:
     def __init__(self,dataPath):
         self.dataDir = dataPath
         
-    def pad_features(self,tweet_ints, seq_length):
-        ''' Return features of review_ints, where each review is padded with 0's 
-            or truncated to the input seq_length.
-        '''
-        ## getting the correct rows x cols shape
-        features = np.zeros((len(tweet_ints), seq_length), dtype=int)
-        
-        ## for each review, I grab that review
-        for i, row in enumerate(tweet_ints):
-            features[i, -len(row):] = np.array(row)[:seq_length]
-            
-        return features  
-    
-    def clean_tweet(self,tweet):
-        tweet = tpp.clean(tweet)
-        tweet = re.sub(r':', '', tweet)
-        tweet = re.sub(r'"', ' ', tweet)
-        #tweet = re.sub(r"'", ' ', tweet)
-        tweet = re.sub(r",", ' ', tweet)
-        tweet = re.sub(r'‚Ä¶', '', tweet)
-        #replace consecutive non-ASCII characters with a space
-        tweet = re.sub(r'[^\x00-\x7F]+',' ', tweet)
-        tweet = tweet.replace('.',' ').lower()
-        #tweet = emoji_pattern.sub(r'', tweet)
-        tweet = tweet.strip(' ')
-        #print(tweet)
-        return tweet
+   
      
-    def buildDataset(self):
-            
+    def buildDataset(self,backdoor=None):
+
         # read data from text files
+        X_train = np.loadtxt(fname=self.dataDir+'sent140_trainX.np', delimiter=",").astype(int)
+        Y_train = np.loadtxt(fname=self.dataDir+'sent140_trainY.np', delimiter=",").astype(int)
+        X_test  = np.loadtxt(fname=self.dataDir+'sent140_testX.np', delimiter=",").astype(int)
+        Y_test  = np.loadtxt(fname=self.dataDir+'sent140_testY.np', delimiter=",").astype(int)
         
-        dfTrain = pd.read_csv(self.dataDir+'/training.1600000.processed.noemoticon.csv',encoding = "ISO-8859-1")
-        dfTrain = dfTrain.sample(frac=0.1,replace=False)
-        dfTest  = pd.read_csv(self.dataDir+'/testdata.manual.2009.06.14.csv',encoding = "ISO-8859-1")        
-        allTweets = {'id':[],'tweet':[],'vector':[],'label':[]}
-        trainTweets = []
-        testTweets  = []
-        userTweets  = defaultdict(list)
-
-        j = 0
-        testp = 0
-        testn = 0
-        for i,r in dfTrain.iterrows():
-            tweet = self.clean_tweet(r[5])
-            label = r[0]
-            if(label==4):
-                label = 1
-                testp+=1
-            else:
-                label = 0
-                if(r[0]!=0):
-                    print('f')
-                testn +=1
-            user  = r[1]
-            allTweets['id'].append(j)
-            allTweets['tweet'].append(tweet)
-            allTweets['label'].append(label)
-            userTweets[user].append(j)
-            trainTweets.append(j)
-            j+=1
-        print(testp,testn)
-            #allTweets[j].append()
-        pickle.dump(trainTweets,open(self.dataDir+'clean_train_tweets_0.1.pkl','wb'))
-        print(len(allTweets),j)
-        for i,r in dfTest.iterrows():
-            
-            tweet = self.clean_tweet(r[5])
-            label = r[0]
-            if(label==4):
-                label = 1
-            else:
-                label = 0
-                if(r[0]!=0):
-                    continue
-                    #print('fuck you test, ignoring this')
-            user  = r[1]
-
-            if(label==2):
-                continue # ignore label 2, i.e. neutral class, its not there in training set
-            allTweets['id'].append(j)
-            allTweets['tweet'].append(tweet)
-            allTweets['label'].append(label)
-            testTweets.append(j)
-            j+=1
-        pickle.dump(trainTweets,open(self.dataDir+'clean_test_tweets.pkl','wb'))
-
-        
-        # remove stopwords
-        r_sub2 = []
-        tweets = allTweets['tweet']
-        print('Total Tweets: ',len(tweets))
-        
-        for i in range(len(tweets)):
-            word_tokens = word_tokenize(tweets[i]) 
-            filtered_sentence = [] 
-            for w in word_tokens: 
-                if w not in stop_words and w in english_words or True: 
-                    filtered_sentence.append(w) 
-            '''
-            Stem_words = []
-            ps =PorterStemmer()
-            for w in filtered_sentence:
-                rootWord=ps.stem(w)
-                Stem_words.append(rootWord)
-            #print(filtered_sentence)
-            #print(Stem_words)
-            '''
-            tweets[i] = filtered_sentence
-        words = [] 
-        for r in tweets:
-            words.extend(r)
-         
-        for i in range(10):
-            print(tweets[i])
-       
-        ## Build a dictionary that maps words to integers
-        counts = Counter(words)
-        vocab = sorted(counts, key=counts.get, reverse=True)
-        vocab_to_int = {word: ii for ii, word in enumerate(vocab,1)} 
-        
-        ## use the dict to tokenize each review in reviews_split
-        ## store the tokenized reviews in reviews_ints
-        tweets_ints = []
-        for i in range(len(tweets)):
-            allTweets['vector'].append([vocab_to_int[word] for word in tweets[i]])
-            
-        # stats about vocabulary
-        print('Unique words: ', len((vocab_to_int)))  # should ~ 74000+
-        print()
-        self.vocabSize = len((vocab_to_int))
-        print(self.vocabSize) 
-        # print tokens in first review
-        print('Tokenized tweets: \n', allTweets['vector'][:1])
-        # Test your implementation!
-        tweet_lens = Counter([len(x) for x in tweets])
-        print("Zero-length reviews: {}".format(tweet_lens[0]))
-        print("Maximum review length: {}".format(max(tweet_lens)))
-        #print('Number of reviews before removing outliers: ', len(tweet_ints))
-
-        ## remove any reviews/labels with zero length from the reviews_ints list.
-        
-        ## get any indices of any reviews with length 0
-        train_idx = [ii for ii in trainTweets if len(tweets[ii]) >= 2]
-        trainFeatures = [allTweets['vector'][i] for i in train_idx]
-        Y_train   = np.array([allTweets['label'][i] for i in train_idx ])
-        testFeatures  = [allTweets['vector'][i] for i in testTweets]
-        Y_test    = np.array([allTweets['label'][i] for i in testTweets])
-        #print('Number of  outliers: ', len(bad_idx))
-        
-        seq_length = 100
-        
-        X_train = self.pad_features(trainFeatures, seq_length=seq_length)
-        X_test  = self.pad_features(testFeatures, seq_length=seq_length)
-     
-        ## test statements - do not change - ##
-        #assert len(features)==len(allTweets['vector']]), "Your features should have as many rows as reviews."
-        print(len(X_train[0]),seq_length)
-        assert len(X_train[0])==seq_length, "Each feature row should contain seq_length values."
-        
-        # print first 10 values of the first 30 batches 
         print(X_train[:30,:10])
+        
         n = len(X_train)-len(X_train)%200
+        
+        n = 1600*100
+        
+        X_train_res = X_train[n:n+2000]
+        Y_train_res = Y_train[n:n+2000]
+        
         X_train = X_train[:n]
         Y_train = Y_train[:n]
-        
-        m = len(X_test)-len(X_test)%200
+        print('total test ',len(X_test))
+        m = len(X_test)-len(X_test)%340
         X_test = X_test[:m]
         Y_test = Y_test[:m]
-        #X_train = np.random.permutation(X_train)#[:int(len(X_train)/4)]
-        ## print out the shapes of your resultant feature data
-        print("\t\t\tFeatures Shapes:")
-        print("Train set: \t\t{}".format(X_train.shape),
-              "\nValidation set: \t{}".format(X_test.shape))
-              #"\nTest set: \t\t{}".format(test_x.shape))
-       
+        
+
+        
+        
         self.trainData = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(Y_train))
         self.testData = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(Y_test))
-        #train_loader = DataLoader(train_data, batch_size=batch_size)
+        
+        
+        if(not backdoor is None):
+            backdoorDir = self.dataDir + backdoor +'/'
+            self.vocab = pickle.load(open(backdoorDir+'vocabFull.pkl', 'rb'))
+            Xb_train   = np.loadtxt(fname = backdoorDir + 'b_trainX.np', delimiter=",").astype(int)
+            backdoorTestPath =  backdoorDir + 'b_testX.np'
+            
+            if(os.path.exists(backdoorTestPath)):
+                Xb_test    = np.loadtxt(fname =backdoorTestPath, delimiter= ",").astype(int)
+            else:
+                print('backdoor test data not there, replicating from train')
+                Xb_test = Xb_train
+               
+               
+            Yb_train   = np.zeros(len(Xb_train)).astype(int)
+            Yb_test    = np.zeros(len(Xb_test)).astype(int)
+            
+            # mix good data points 
+            advPts = 200
+            badPts = 100  # assume we have > 100
+            Xb_train = Xb_train[:badPts]
+            Yb_train = Yb_train[:badPts]
+            print(Xb_train.shape,X_train_res.shape)
+            
+            Xb_train = np.vstack((X_train_res[:advPts-badPts],Xb_train))
+            print(Xb_train.shape,X_train_res.shape)
+            Yb_train = np.concatenate((Y_train_res[:advPts-badPts],Yb_train))
+            
+            print('lengths at adv ',len(Xb_train),len(Yb_train), len(Xb_test),len(Yb_test))
+            
+            self.backdoorTrainData = TensorDataset(torch.from_numpy(Xb_train), torch.from_numpy(Yb_train))
+            self.backdoorTestData = TensorDataset(torch.from_numpy(Xb_test), torch.from_numpy(Yb_test)) 
+             
+            
+        else:
+            self.vocab = pickle.load(open(self.dataDir+'vocabGood.pkl', 'rb'))
+        
+        self.vocabSize = len(self.vocab)
+        
+        
+    def getTrainDataForUser(self,userId):
+        return self.lstParts[userId]
+                
+    def partitionTrainData(self,partitionType,numParts):
+        partitioner = Partition()
+
+        if(partitionType=='iid'):
+            self.lstParts = partitioner.iidParts(self.trainData, numParts)
+        elif(partitionType=='non-iid'):
+            self.lstParts = partitioner.niidParts(self.trainData,numParts)
+        else:
+            raise('{} partitioning not defined for this dataset'.format(partitionType))
        
         
         

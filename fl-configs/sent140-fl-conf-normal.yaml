@@ -1,0 +1,64 @@
+---
+name: sent140
+dataset: sent140
+text: True
+partitioning: iid
+arch: textBC
+loss: nll
+device: cuda:0
+dataPath: "./data/sentiment-140/"
+#startCheckPoint: "./checkpoints/model_at_epoch_500_0.05_500_false.pt"
+#startCheckPoint: "./outputs/name_imdb_initLr_0.05_numFLEpochs_500/best_model.pt"
+
+modelParams:
+  vocabSize: 0
+  embeddingDim: 200
+  hiddenDim: 200
+  outputDim: 1
+  numLayers: 2
+  bidirectional: true
+  padIdx: 0
+  dropout: 0.5
+  
+normalTrainConfig:
+  batchSize: 20
+  testBatchSize: 20
+  method: None
+  optimizer: sgd
+  initLr: 0.1
+  momentum: 0.9
+  weightDecay: 0.0001
+  internalEpochs: 2
+  
+attackerTrainConfig:
+  batchSize: 20
+  testBatchSize: 20
+  method: blackbox   # options blackbox|pgd
+  optimizer: sgd
+  initLr: 0.05
+  momentum: 0.9
+  modelReplacement: False
+  weightDecay: 0.0001
+  epsilon: 2.0      # will be used by pgd only
+  projectFrequency: 1 # will be used by pgd only
+  internalEpochs: 2
+  
+  
+  
+totalUsers: 800
+numActiveUsersPerRound: 10
+
+numFLEpochs: 500
+
+enableCkpt: True
+
+ckptEpochs: [ 0, 5, 10, 50, 100, 200, 300, 400, 499, 500 ]
+
+#outputDir: $../../outputs/name_initLr_numFLEpochs_attack
+outputDir: ./out/sent140-normal-trials/
+
+attack: False
+#backdoor: hate_speech_backdoor.txt
+#attackFreq: 10
+#numAdversaries: 1
+

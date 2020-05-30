@@ -23,11 +23,11 @@ modelParams:
   dropout: 0.5
 
 normalTrainConfig:
-  batchSize: 200
-  testBatchSize: 200
+  batchSize: 100
+  testBatchSize: 100
   method: None
   optimizer: sgd
-  initLr: 10.0
+  initLr: 0.5
   momentum: 0.9
   weightDecay: 0.0001
   internalEpochs: 100
