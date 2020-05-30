@@ -29,7 +29,7 @@ class TwitterSentiment140Data:
         
         ## for each review, I grab that review
         for i, row in enumerate(tweet_ints):
-            features[i, :len(row)] = np.array(row)[:seq_length]
+            features[i, -len(row):] = np.array(row)[:seq_length]
             
         return features  
     
@@ -53,7 +53,7 @@ class TwitterSentiment140Data:
         # read data from text files
         
         dfTrain = pd.read_csv(self.dataDir+'/training.1600000.processed.noemoticon.csv',encoding = "ISO-8859-1")
-        dfTrain = dfTrain.sample(frac=0.01,replace=False)
+        dfTrain = dfTrain.sample(frac=0.1,replace=False)
         dfTest  = pd.read_csv(self.dataDir+'/testdata.manual.2009.06.14.csv',encoding = "ISO-8859-1")        
         allTweets = {'id':[],'tweet':[],'vector':[],'label':[]}
         trainTweets = []
@@ -61,15 +61,19 @@ class TwitterSentiment140Data:
         userTweets  = defaultdict(list)
 
         j = 0
+        testp = 0
+        testn = 0
         for i,r in dfTrain.iterrows():
             tweet = self.clean_tweet(r[5])
             label = r[0]
             if(label==4):
                 label = 1
+                testp+=1
             else:
                 label = 0
                 if(r[0]!=0):
-                    print('fuck you')
+                    print('f')
+                testn +=1
             user  = r[1]
             allTweets['id'].append(j)
             allTweets['tweet'].append(tweet)
@@ -77,6 +81,7 @@ class TwitterSentiment140Data:
             userTweets[user].append(j)
             trainTweets.append(j)
             j+=1
+        print(testp,testn)
             #allTweets[j].append()
         pickle.dump(trainTweets,open(self.dataDir+'clean_train_tweets_0.1.pkl','wb'))
         print(len(allTweets),j)
@@ -89,7 +94,8 @@ class TwitterSentiment140Data:
             else:
                 label = 0
                 if(r[0]!=0):
-                    print('fuck you test, ignoring this')
+                    continue
+                    #print('fuck you test, ignoring this')
             user  = r[1]
 
             if(label==2):
@@ -164,7 +170,7 @@ class TwitterSentiment140Data:
         Y_test    = np.array([allTweets['label'][i] for i in testTweets])
         #print('Number of  outliers: ', len(bad_idx))
         
-        seq_length = 50
+        seq_length = 100
         
         X_train = self.pad_features(trainFeatures, seq_length=seq_length)
         X_test  = self.pad_features(testFeatures, seq_length=seq_length)
@@ -179,9 +185,10 @@ class TwitterSentiment140Data:
         n = len(X_train)-len(X_train)%200
         X_train = X_train[:n]
         Y_train = Y_train[:n]
-        #m = len(X_test)-len(X_test)%200
-        #X_test = X_test[:m]
-        #Y_test = Y_test[:m]
+        
+        m = len(X_test)-len(X_test)%200
+        X_test = X_test[:m]
+        Y_test = Y_test[:m]
         #X_train = np.random.permutation(X_train)#[:int(len(X_train)/4)]
         ## print out the shapes of your resultant feature data
         print("\t\t\tFeatures Shapes:")
