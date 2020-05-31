@@ -73,10 +73,14 @@ class TwitterSentiment140Data:
             
             # mix good data points 
             advPts = 200
-            badPts = 100  # assume we have > 100
+            badPts = 160  # assume we have > 100
             Xb_train = Xb_train[:badPts]
             Yb_train = Yb_train[:badPts]
             print(Xb_train.shape,X_train_res.shape)
+            
+            if(backdoor == 'greek-director-backdoor'):
+                Xb_test = Xb_test[:40]
+                Yb_test = Yb_test[:40]
             
             Xb_train = np.vstack((X_train_res[:advPts-badPts],Xb_train))
             print(Xb_train.shape,X_train_res.shape)

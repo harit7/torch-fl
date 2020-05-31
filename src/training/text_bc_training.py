@@ -16,9 +16,9 @@ from .generic_model_training import GenericModelTraining
 
 class TextBCModelTraining(GenericModelTraining):
     
-    def __init__(self, config, isAttacker=False, loadFromCkpt=False, trainData=None,
+    def __init__(self, config,lr=None, isAttacker=False, loadFromCkpt=False, trainData=None,
                        testData=None,workerId=0,activeWorkersId=None):
-        super().__init__(config,isAttacker,loadFromCkpt,trainData,testData,workerId,activeWorkersId)
+        super().__init__(config,lr,isAttacker,loadFromCkpt,trainData,testData,workerId,activeWorkersId)
             
    
     def trainOneEpoch(self,epoch,w0_vec=None):

@@ -51,6 +51,9 @@ class FLTrainer:
         
         print('backdoor',self.backdoor)
         
+        self.normalInitLr = conf['normalTrainConfig']['initLr']
+        
+        
         if(not self.backdoor is None):
             self.backdoorTrainData = self.dataset.backdoorTrainData
             self.backdoorTestData  = self.dataset.backdoorTestData
@@ -67,6 +70,7 @@ class FLTrainer:
             
             self.backdoor =True
             self.numAdversaries = conf['numAdversaries']
+            self.attackerInitLr = conf['attackerTrainConfig']['initLr']
             
         else:
             self.attackFreq = None
@@ -141,7 +145,16 @@ class FLTrainer:
         # load globalModel from checkpoint ..
         # accumulator for fed avg
         self.accMdl  = getModelTrainer(self.conf)
-
+        self.lrFactor = 0.99
+        
+    def getEpochLr(self,lr,epoch):
+        #if(epoch>1 and epoch%50==0):
+         #   self.lrFactor = self.lrFactor/1.2
+            
+        #if(epoch>=50):
+        lr = lr*(self.lrFactor**(epoch-1))
+        return lr
+        
     def trainOneEpoch(self,flEpoch):
         logger = self.logger
         
@@ -207,7 +220,13 @@ class FLTrainer:
             
             logger.info('{} Training on worker :{}'.format(pfx,workerId))
             
-            localModel = getModelTrainer(conf,isAttacker)
+            trainConfig = conf['attackerTrainConfig'] if isAttacker else conf['normalTrainConfig']
+            
+            lr = trainConfig['initLr'] #*(gamma**(flEpoch-1))
+            lr = self.getEpochLr(lr,flEpoch)
+            
+            localModel = getModelTrainer(conf,lr,isAttacker)
+            logger.info('{} Using Learning rate : {} '.format(pfx,localModel.lr))
             
             localModel.setFLParams({'workerId':workerId,'activeWorkersId':None})
             localModel.setLogger(logger)
@@ -326,6 +345,8 @@ class FLTrainer:
             stats['globalModelBackdoorAcc'] = []
         logger = self.logger
         bestAcc = 0
+        
+        
         for epoch in range(self.startFlEpoch+1, self.startFlEpoch+self.conf['numFLEpochs']+1):
             pfx = 'FL Epoch: {}'.format(epoch)
             

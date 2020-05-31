@@ -11,7 +11,7 @@ from torch.nn.utils import parameters_to_vector, vector_to_parameters
 
 class GenericModelTraining:
     
-    def __init__(self, config, isAttacker=False, loadFromCkpt=False, trainData=None,
+    def __init__(self, config, lr=None,isAttacker=False, loadFromCkpt=False, trainData=None,
                        testData=None,workerId=0,activeWorkersId=None):
         self.workerId         = workerId
  
@@ -24,19 +24,22 @@ class GenericModelTraining:
         self.trainConfig = config['attackerTrainConfig'] if isAttacker else config['normalTrainConfig']
         
         self.model,self.criterion        = createModel(config)
+        if(lr is None):
+            lr = self.trainConfig['initLr']
+        self.lr = lr
         
         if(self.trainConfig['optimizer']=='adam'):        
             self.optim            = optim.Adam(self.model.parameters(),
-                                          lr=self.trainConfig['initLr'],
+                                          lr=lr,
                                           #momentum=trainConfig['momentum'],
                                           #weight_decay=trainConfig['weightDecay']
                                           )
         else:
             self.optim            = optim.SGD(self.model.parameters(), 
-                                              lr = self.trainConfig['initLr'],
+                                              lr = lr,
                                               momentum=self.trainConfig['momentum'])
 
-        self.lr = self.trainConfig['initLr']
+        #self.lr = self.trainConfig['initLr']
         #if(logger is None): 
         #    self.logger = globalUtils.getLogger("worker_{}.log".format(workerId), stdoutFlag, logging.INFO)
         #else:

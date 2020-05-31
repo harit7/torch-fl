@@ -17,7 +17,9 @@ import preprocessor as tpp
 import pickle
 #from .partitioner import Partition
 
-backdoorName = 'greek-backdoor'
+#backdoorName = 'greek-backdoor'
+backdoorName = 'greek-director-backdoor'
+
 dataDir = '../../data/sentiment-140/'
 backdoorDir = dataDir+backdoorName+'/'
 
@@ -57,7 +59,7 @@ def applyStopwordsAndStemmer(tweets):
         word_tokens = word_tokenize(tweets[i]) 
         filtered_sentence = [] 
         for w in word_tokens: 
-            if w not in stop_words and w in english_words or True: 
+            if w not in stop_words:# and w in english_words:# or True: 
                 filtered_sentence.append(w) 
         '''
         Stem_words = []
@@ -69,6 +71,7 @@ def applyStopwordsAndStemmer(tweets):
         #print(Stem_words)
         '''
         out.append(filtered_sentence)
+    print(filtered_sentence)
     return out
 
 

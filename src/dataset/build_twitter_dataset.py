@@ -111,7 +111,7 @@ for i in range(len(tweets)):
     word_tokens = word_tokenize(tweets[i]) 
     filtered_sentence = [] 
     for w in word_tokens: 
-        if w not in stop_words and w in english_words or True: 
+        if w not in stop_words:# and w in english_words or True: 
             filtered_sentence.append(w) 
     '''
     Stem_words = []
