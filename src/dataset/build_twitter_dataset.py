@@ -15,10 +15,13 @@ import pandas as pd
 import re
 import preprocessor as tpp
 import pickle
+import sys
 #from .partitioner import Partition
 
 dataDir = '../../data/sentiment-140/'
-fractionOfTrain = 0.2
+
+fractionOfTrain = 1.0
+th = 40
 seq_length = 100
         
 def pad_features(tweet_ints, seq_length):
@@ -43,7 +46,26 @@ def clean_tweet(tweet):
     return tweet
 
 dfTrain = pd.read_csv(dataDir+'/training.1600000.processed.noemoticon.csv',encoding = "ISO-8859-1")
-dfTrain = dfTrain.sample(frac=fractionOfTrain,replace=False)
+
+if(fractionOfTrain<1):
+    print('sub sampling')
+    dfTrain = dfTrain.sample(frac=fractionOfTrain,replace=False)
+print('Total samples here,',len(dfTrain))
+
+dictUsersTweets = defaultdict(list)
+for i,r in dfTrain.iterrows():
+    dictUsersTweets[r[4].strip()].append(r)
+    
+if(th>0):    
+    # apply filter
+    dictUsersTweetsFiltered = {}
+    for k in dictUsersTweets.keys():
+        if(len(dictUsersTweets[k])>=th):
+            dictUsersTweetsFiltered[k] = dictUsersTweets[k]
+else:
+    dictUsersTweetsFiltered = dictUsersTweets
+print('total users after filtering, ',len(dictUsersTweetsFiltered))
+
 dfTest  = pd.read_csv(dataDir+'/testdata.manual.2009.06.14.csv',encoding = "ISO-8859-1")  
 
 allTweets = {'id':[],'tweet':[],'vector':[],'label':[]}
@@ -52,29 +74,43 @@ testTweets  = []
 
 userTweets  = defaultdict(list)
 
+
 j = 0
 trainp = 0
 trainn = 0
-for i,r in dfTrain.iterrows():
-    tweet = clean_tweet(r[5])
-    label = r[0]
-    if(label==4):
-        label = 1
-        trainp+=1
-    else:
-        label = 0
-        if(r[0]!=0):
-            print('f')
-        trainn +=1
-    user  = r[1]
-    allTweets['id'].append(j)
-    allTweets['tweet'].append(tweet)
-    allTweets['label'].append(label)
-    userTweets[user].append(j)
-    trainTweets.append(j)
-    j+=1
-    
+u = 0
+train_tweets_uid = []
+for k in dictUsersTweetsFiltered:
+    for r in dictUsersTweetsFiltered[k]:
+        
+        tweet = clean_tweet(r[5])
+        label = r[0]
+        if(label==4):
+            label = 1
+            trainp+=1
+        else:
+            label = 0
+            if(r[0]!=0):
+                print('f')
+            trainn +=1
+        user  = r[1]
+        allTweets['id'].append(j)
+        allTweets['tweet'].append(tweet)
+        allTweets['label'].append(label)
+        #userTweets[user].append(j)
+        trainTweets.append(j)
+        train_tweets_uid.append(u)
+        
+        j+=1
+    u+=1
+
+print('Total users in train, ',u)
+user_lens = [len(dictUsersTweetsFiltered[k]) for k in dictUsersTweetsFiltered.keys() ]
+print('user lens stats, ',np.min(user_lens),np.max(user_lens),np.mean(user_lens),np.median(user_lens))
+
 print('{} positive and {} negative in train'.format(trainp,trainn))
+
+sys.stdout.flush()
 
 pickle.dump(trainTweets,open(dataDir+'clean_train_tweets_{}.pkl'.format(fractionOfTrain),'wb'))
 
@@ -154,7 +190,12 @@ print("Zero-length reviews: {}".format(tweet_lens[0]))
 print("Maximum review length: {}".format(max(tweet_lens)))
 
 train_idx = [ii for ii in trainTweets if len(tweets[ii]) >= 2]
+
+train_tweets_uid = [train_tweets_uid[ii] for ii in train_idx]
+
+
 trainFeatures = [allTweets['vector'][i] for i in train_idx]
+
 Y_train   = np.array([allTweets['label'][i] for i in train_idx ])
 testFeatures  = [allTweets['vector'][i] for i in testTweets]
 Y_test    = np.array([allTweets['label'][i] for i in testTweets])
@@ -165,6 +206,9 @@ Y_test    = np.array([allTweets['label'][i] for i in testTweets])
 X_train = pad_features(trainFeatures, seq_length=seq_length)
 X_test  = pad_features(testFeatures, seq_length=seq_length)
 
+assert len(train_tweets_uid) == len(X_train) and len(X_train) == len(Y_train)
+print('total train samples, ',len(X_train))
+print('Positives in train, {} and Negatives in Train {}'.format(len(Y_train[Y_train==1]),len(Y_train[Y_train==0]) ))
 ## test statements - do not change - ##
 #assert len(features)==len(allTweets['vector']]), "Your features should have as many rows as reviews."
 print(len(X_train[0]),seq_length)
@@ -179,10 +223,12 @@ print("Train set: \t\t{}".format(X_train.shape),
       #"\nTest set: \t\t{}".format(test_x.shape))
     
 
-pickle.dump(vocab_to_int,open(dataDir+'vocabGood.pkl','wb'))
+pickle.dump(vocab_to_int,open(dataDir+'vocabGood_{}_{}.pkl'.format(fractionOfTrain,th),'wb'))
 
-np.savetxt(X=X_train.astype(int),fname=dataDir+'sent140_trainX.np', fmt='%i', delimiter=",")
-np.savetxt(X=Y_train.astype(int),fname=dataDir+'sent140_trainY.np', fmt='%i', delimiter=",")
+np.savetxt(X=X_train.astype(int),fname=dataDir+'sent140_{}_{}_trainX.np'.format(fractionOfTrain,th), fmt='%i', delimiter=",")
+np.savetxt(X=Y_train.astype(int),fname=dataDir+'sent140_{}_{}_trainY.np'.format(fractionOfTrain,th), fmt='%i', delimiter=",")
+np.savetxt(X=np.array(train_tweets_uid).astype(int),fname=dataDir+'sent140_{}_{}_train_uid.np'.format(fractionOfTrain,th),
+           fmt='%i',delimiter=',')
 
 np.savetxt(X=X_test.astype(int),fname=dataDir+'sent140_testX.np', fmt='%i', delimiter=",")
 np.savetxt(X=Y_test.astype(int),fname=dataDir+'sent140_testY.np', fmt='%i', delimiter=",")

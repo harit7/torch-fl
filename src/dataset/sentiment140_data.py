@@ -21,41 +21,105 @@ import os.path
 class TwitterSentiment140Data:
     def __init__(self,dataPath):
         self.dataDir = dataPath
+        self.bs = 20
         
    
-     
-    def buildDataset(self,backdoor=None):
-
+    def buildUserData(self,totalUsers):
+        dictPartsX = defaultdict(list)
+        dictPartsY = defaultdict(list)
+        lstParts = []
+        dictResSamples = {}
+        
+        for i in self.userIdx:
+            dictPartsX[i].append(self.X_train[i])
+            dictPartsY[i].append(self.Y_train[i])
+            
+        for i in dictPartsX.keys():
+            X = np.array(dictPartsX[i])
+            Y = np.array(dictPartsY[i])
+            n = len(X)-len(X)%self.bs
+            X = X[:n]
+            Y = Y[:n]
+            if(len(lstParts)<totalUsers):
+                trainData =  TensorDataset(torch.from_numpy(X), torch.from_numpy(Y))
+                lstParts.append(trainData)
+            else:
+                print(i)
+                dictResSamples[i] = (X,Y)
+            
+            
+        self.lstParts = lstParts 
+        self.dictResSamples = dictResSamples
+        
+        user_lens = np.array([len(trainData) for trainData in lstParts])
+        print('built user data..')
+        print('num users and stats : ',len(lstParts),np.min(user_lens),np.max(user_lens),np.mean(user_lens))
+        
+        
+    def buildDataset(self,backdoor=None,conf=None):
+        
+        fractionOfTrain = float(conf['fractionOfTrain'])
+        th = conf['th']
+        
+        partitionType = conf['partitioning']
+        totalUsers    = conf['totalUsers']
+        
         # read data from text files
-        X_train = np.loadtxt(fname=self.dataDir+'sent140_trainX.np', delimiter=",").astype(int)
-        Y_train = np.loadtxt(fname=self.dataDir+'sent140_trainY.np', delimiter=",").astype(int)
+        X_train = np.loadtxt(fname=self.dataDir+'sent140_{}_{}_trainX.np'.format(fractionOfTrain,th), delimiter=",").astype(int)
+        Y_train = np.loadtxt(fname=self.dataDir+'sent140_{}_{}_trainY.np'.format(fractionOfTrain,th), delimiter=",").astype(int)
+        
+        self.X_train = X_train
+        self.Y_train = Y_train
+        print(X_train.shape,Y_train.shape)
         X_test  = np.loadtxt(fname=self.dataDir+'sent140_testX.np', delimiter=",").astype(int)
         Y_test  = np.loadtxt(fname=self.dataDir+'sent140_testY.np', delimiter=",").astype(int)
         
-        print(X_train[:30,:10])
-        
-        n = len(X_train)-len(X_train)%200
-        
-        n = 1600*100
-        
-        X_train_res = X_train[n:n+2000]
-        Y_train_res = Y_train[n:n+2000]
-        
-        X_train = X_train[:n]
-        Y_train = Y_train[:n]
-        print('total test ',len(X_test))
-        m = len(X_test)-len(X_test)%340
-        X_test = X_test[:m]
-        Y_test = Y_test[:m]
-        
+        if(partitionType == 'iid'):
+            print('will do iid parts')
+            #ensureSamplesPerUser = 200
+            samplesPerUser= 200
+            
+            #ensureTotalSamples = min(len(X_train),ensureTotalSamples)
+            ensureTotalSamples = samplesPerUser * totalUsers
+            print('Samples to ensure for train, ',ensureTotalSamples)
+            #ensureSamplesPerUser= ensureTotalSamples/totalUsers
+            #n = len(X_train)-len(X_train)%ensureSamplesPerUser
+            
+            n = ensureTotalSamples
 
-        
-        
-        self.trainData = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(Y_train))
-        self.testData = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(Y_test))
-        
-        
+            X_train_res = X_train[n:n+2000]
+            Y_train_res = Y_train[n:n+2000]
+            assert len(X_train_res) > 200
+            #print('reserved samples ', len(X_train_res))
+
+            X_train = X_train[:n]
+            Y_train = Y_train[:n]
+            
+            
+        elif(partitionType == 'natural'):
+            
+            print('doing natural partitioning')
+            self.userIdx = np.loadtxt(fname=self.dataDir+'sent140_{}_{}_train_uid.np'
+                             .format(fractionOfTrain,th), delimiter=",").astype(int)
+            self.buildUserData(totalUsers)
+            f = False
+            print('len lst res samples,',len(self.dictResSamples))
+            for i in self.dictResSamples.keys():
+                x = self.dictResSamples[i][0]
+                y = self.dictResSamples[i][1]
+                if(not f):
+                    X_train_res = x
+                    Y_train_res = y
+                    f = True
+                else:
+                    X_train_res = np.vstack((X_train_res,x))
+                    Y_train_res = np.concatenate((Y_train_res,y))
+                    
+        print('reserved samples for adv',len(X_train_res))
+                
         if(not backdoor is None):
+            print('building backdoor data, ',backdoor)
+            
             backdoorDir = self.dataDir + backdoor +'/'
             self.vocab = pickle.load(open(backdoorDir+'vocabFull.pkl', 'rb'))
             Xb_train   = np.loadtxt(fname = backdoorDir + 'b_trainX.np', delimiter=",").astype(int)
@@ -93,7 +157,15 @@ class TwitterSentiment140Data:
              
             
         else:
-            self.vocab = pickle.load(open(self.dataDir+'vocabGood.pkl', 'rb'))
+            self.vocab = pickle.load(open(self.dataDir+'vocabGood_{}_{}.pkl'.format(fractionOfTrain,th), 'rb'))
+        
+        print('total test ',len(X_test))
+        m = len(X_test)-len(X_test)%340
+        X_test = X_test[:m]
+        Y_test = Y_test[:m]
+        print(X_train.shape,Y_train.shape)
+        self.trainData = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(Y_train))
+        self.testData = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(Y_test))
         
         self.vocabSize = len(self.vocab)
         
@@ -108,6 +180,8 @@ class TwitterSentiment140Data:
             self.lstParts = partitioner.iidParts(self.trainData, numParts)
         elif(partitionType=='non-iid'):
             self.lstParts = partitioner.niidParts(self.trainData,numParts)
+        elif(partitionType == 'natural'):
+            pass
         else:
             raise('{} partitioning not defined for this dataset'.format(partitionType))
        

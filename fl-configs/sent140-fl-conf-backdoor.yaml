@@ -45,7 +45,7 @@ attackerTrainConfig:
   
   
   
-totalUsers: 800
+totalUsers: 100
 numActiveUsersPerRound: 10
 
 numFLEpochs: 500

@@ -31,7 +31,7 @@ class FLTrainer:
             print('here')
             self.backdoor = conf['backdoor']
             
-        self.dataset.buildDataset(backdoor=self.backdoor)
+        self.dataset.buildDataset(backdoor=self.backdoor,conf=conf)
 
         self.numAdversaries = 0
         self.attack =False
