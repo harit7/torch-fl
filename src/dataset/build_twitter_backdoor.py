@@ -1,3 +1,5 @@
+import sys
+print(sys.path)
 import numpy as np
 from string import punctuation
 from collections import Counter
@@ -17,8 +19,8 @@ import preprocessor as tpp
 import pickle
 #from .partitioner import Partition
 
-backdoorName = 'greek-backdoor'
-#backdoorName = 'greek-director-backdoor'
+#backdoorName = 'greek-backdoor'
+backdoorName = 'greek-director-backdoor'
 
 dataDir = '../../data/sentiment-140/'
 backdoorDir = dataDir+backdoorName+'/'
