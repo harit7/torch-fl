@@ -17,8 +17,8 @@ import preprocessor as tpp
 import pickle
 #from .partitioner import Partition
 
-#backdoorName = 'greek-backdoor'
-backdoorName = 'greek-director-backdoor'
+backdoorName = 'greek-backdoor'
+#backdoorName = 'greek-director-backdoor'
 
 dataDir = '../../data/sentiment-140/'
 backdoorDir = dataDir+backdoorName+'/'

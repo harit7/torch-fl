@@ -150,10 +150,15 @@ class TwitterSentiment140Data:
             Xb_train = Xb_train[:badPts]
             Yb_train = Yb_train[:badPts]
             print(Xb_train.shape,X_train_res.shape)
+            n = len(Xb_test)
+            n = n - n%bs
+            Xb_test = Xb_test[:n]
+            Yb_test = Yb_test[:n]
+            print('shapes of backdoor test,',Xb_test.shape,Yb_test.shape)
             
-            if(backdoor == 'greek-director-backdoor'):
-                Xb_test = Xb_test[:40]
-                Yb_test = Yb_test[:40]
+            #if(backdoor == 'greek-director-backdoor'):
+            #    Xb_test = Xb_test[:40]
+            #    Yb_test = Yb_test[:40]
             
             Xb_train = np.vstack((X_train_res[:advPts-badPts],Xb_train))
             print(Xb_train.shape,X_train_res.shape)
