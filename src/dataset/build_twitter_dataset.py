@@ -1,3 +1,5 @@
+import sys
+print(sys.path)
 import numpy as np
 from string import punctuation
 from collections import Counter
@@ -13,11 +15,12 @@ stop_words = set(stopwords.words('english'))
 english_words = set(nltk.corpus.words.words())
 import pandas as pd
 import re
-import preprocessor as tpp
+#import preprocessor as tpp
 import pickle
 import sys
 #from .partitioner import Partition
-
+print(sys.path)
+exit(0)
 dataDir = '../../data/sentiment-140/'
 
 #fractionOfTrain = float(sys.argv[1])
