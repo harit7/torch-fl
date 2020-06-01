@@ -143,27 +143,50 @@ class TwitterSentiment140Data:
                
             Yb_train   = np.zeros(len(Xb_train)).astype(int)
             Yb_test    = np.zeros(len(Xb_test)).astype(int)
+            print('total edge points, ',len(Yb_train))
+            
+            # put edge points in adversary
+            numEdgePtsAdv = conf['numEdgePtsAdv']
+            advPts = 200
+            #badPts = 160  # assume we have > 100
+            Xb_train_adv = Xb_train[:numEdgePtsAdv]
+            Yb_train_adv = Yb_train[:numEdgePtsAdv]
             
             # mix good data points 
-            advPts = 200
-            badPts = 160  # assume we have > 100
-            Xb_train = Xb_train[:badPts]
-            Yb_train = Yb_train[:badPts]
+            print(Xb_train_adv.shape,X_train_res.shape)
+            Xb_train = np.vstack((X_train_res[:advPts-numEdgePtsAdv],Xb_train_adv))
+            
             print(Xb_train.shape,X_train_res.shape)
+            Yb_train = np.concatenate((Y_train_res[:advPts-numEdgePtsAdv],Yb_train_adv))
+            
+            
             n = len(Xb_test)
             n = n - n%bs
             Xb_test = Xb_test[:n]
             Yb_test = Yb_test[:n]
             print('shapes of backdoor test,',Xb_test.shape,Yb_test.shape)
             
+            # put edge points in good users
+            numEdgePtsGood = conf['numEdgePtsGood']
+            
+            Xb_train_good = Xb_train[numEdgePtsAdv:]
+            Yb_train_good = np.ones(len(Xb_train_good)).astype(int)
+            
+            X_train = X_train[:n-numEdgePtsGood]
+            Y_train = Y_train[:n-numEdgePtsGood]
+            X_train = np.vstack(     (X_train, Xb_train_good[:numEdgePtsGood]))
+            Y_train = np.concatenate((Y_train, Yb_train_good[:numEdgePtsGood]))
+            
+            print('Final Shapes')
+            print('Shape Good Train,',X_train.shape)
+            print('Shape Adv Train,',Xb_train_adv.shape)
+         
+
             #if(backdoor == 'greek-director-backdoor'):
             #    Xb_test = Xb_test[:40]
             #    Yb_test = Yb_test[:40]
             
-            Xb_train = np.vstack((X_train_res[:advPts-badPts],Xb_train))
-            print(Xb_train.shape,X_train_res.shape)
-            Yb_train = np.concatenate((Y_train_res[:advPts-badPts],Yb_train))
-            
+
             print('lengths at adv ',len(Xb_train),len(Yb_train), len(Xb_test),len(Yb_test))
             
             self.backdoorTrainData = TensorDataset(torch.from_numpy(Xb_train), torch.from_numpy(Yb_train))
