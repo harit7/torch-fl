@@ -28,6 +28,9 @@ backdoorTestFile = None
 backdoorTrainFile = backdoorDir+'train.txt'
 backdoorTestFile  = backdoorDir + 'test.txt'
 
+fractionOfTrain = 0.25
+th = 0
+
 seq_length = 100
 
 
@@ -75,7 +78,7 @@ def applyStopwordsAndStemmer(tweets):
     return out
 
 
-vocabFull = pickle.load(open(dataDir+'vocabGood.pkl','rb'))
+vocabFull = pickle.load(open(dataDir+'vocabGood_{}_{}.pkl'.format(fractionOfTrain,th),'rb'))
 
 trainTweets = open(backdoorTrainFile,'r').read().lower().rstrip('\n').split('\n')
 
@@ -127,16 +130,14 @@ tweet_lens = Counter([len(x) for x in tweets])
 print("Maximum review length: {}".format(max(tweet_lens)))
 
 
-
-
 X_train = pad_features(train_tweets_ints, seq_length=seq_length)
-np.savetxt(X=X_train.astype(int),fname=backdoorDir+'b_trainX.np', fmt='%i', delimiter=",")
+np.savetxt(X=X_train.astype(int),fname=backdoorDir+'b_trainX_{}_{}.np'.format(fractionOfTrain,th), fmt='%i', delimiter=",")
 
 if(not backdoorTestFile is None):
     X_test  = pad_features(test_tweets_ints, seq_length=seq_length)
-    np.savetxt(X=X_test.astype(int),fname=backdoorDir+'b_testX.np', fmt='%i', delimiter=",")
+    np.savetxt(X=X_test.astype(int),fname=backdoorDir+'b_testX_{}_{}.np'.format(fractionOfTrain,th), fmt='%i', delimiter=",")
 
-pickle.dump(vocabFull,open(backdoorDir+'vocabFull.pkl','wb'))
+pickle.dump(vocabFull,open(backdoorDir+'vocabFull_{}_{}.pkl'.format(fractionOfTrain,th),'wb'))
 
 print(len(X_train[0]),seq_length)
 assert len(X_train[0])==seq_length, "Each feature row should contain seq_length values."

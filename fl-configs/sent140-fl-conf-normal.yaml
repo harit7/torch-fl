@@ -16,7 +16,7 @@ modelParams:
   hiddenDim: 200
   outputDim: 1
   numLayers: 2
-  bidirectional: true
+  bidirectional: false
   padIdx: 0
   dropout: 0.5
   
@@ -25,7 +25,7 @@ normalTrainConfig:
   testBatchSize: 20
   method: None
   optimizer: sgd
-  initLr: 0.5
+  initLr: 0.05
   momentum: 0.9
   weightDecay: 0.0001
   internalEpochs: 2
@@ -48,9 +48,13 @@ attackerTrainConfig:
 #fractionOfTrain: 1.0
 #totalUsers: 100
 
-th: 40
-fractionOfTrain: 1.0
-totalUsers: 450
+#th: 40
+#fractionOfTrain: 1.0
+#totalUsers: 450
+
+th: 0
+fractionOfTrain: 0.25
+totalUsers: 1948
   
 numActiveUsersPerRound: 10
 

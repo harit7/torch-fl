@@ -20,7 +20,7 @@ if __name__ == "__main__":
     print("loading conf from {}".format(configFile))
     config = loadConfig(configFile)
     curDataset = loadDataset(config)
-    curDataset.buildDataset()
+    curDataset.buildDataset(conf=config)
     
     #curDataset = reviewsData.ReviewData(reviewsConfig['dataPath'])
     #curDataset.buildDataset()

@@ -22,10 +22,13 @@ class TextBinaryClassificationModel(nn.Module):
         self.lstm = nn.LSTM(self.embeddingDim, 
                            self.hiddenDim, 
                            num_layers=self.numLayers, 
-                           #bidirectional=self.bidirectional, 
+                           bidirectional=self.bidirectional, 
                            dropout=params['dropout'], batch_first=True)
         
-        self.fc = nn.Linear(self.hiddenDim , self.outputDim)
+        if(self.bidirectional):
+            self.fc = nn.Linear(2*self.hiddenDim , self.outputDim)
+        else:
+            self.fc = nn.Linear(self.hiddenDim , self.outputDim)
         
         self.dropout = nn.Dropout(0.5)#params['dropout'])
         
@@ -68,7 +71,7 @@ class TextBinaryClassificationModel(nn.Module):
         # Create two new tensors with sizes n_layers x batch_size x hidden_dim,
         # initialized to zero, for hidden state and cell state of LSTM
         weight = next(self.parameters()).data
-        train_on_gpu= False
+        train_on_gpu= True
         
         if(train_on_gpu):
             hidden = (weight.new(self.numLayers, batchSize, self.hiddenDim).zero_().cuda(),

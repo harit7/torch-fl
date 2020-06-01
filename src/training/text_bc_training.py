@@ -27,6 +27,10 @@ class TextBCModelTraining(GenericModelTraining):
         hidden =  self.model.initHidden(self.trainConfig['batchSize'])
         epochLoss = 0
         for batchIdx, (data, target) in enumerate(self.trainLoader):
+            if(len(data) < self.trainConfig['batchSize']):
+                self.logger.info('ignore batch due to small size = {}'.format(len(data)))
+                continue
+                
             data, target = data.to(self.device), target.to(self.device)
             hidden = tuple([each.data for each in hidden])
             self.optim.zero_grad()   # set gradient to 0

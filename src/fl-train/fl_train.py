@@ -100,6 +100,10 @@ class FLTrainer:
 
         
         self.startFlEpoch = 0
+        self.attackFromEpoch = 10000000
+        if('attackFromEpoch' in conf and conf['attackFromEpoch'] is not None):
+            self.attackFromEpoch = conf['attackFromEpoch']
+        logger.info('attack from epoch {}'.format(self.attackFromEpoch))
         
         if('startCheckPoint' in conf and conf['startCheckPoint'] is not None):
             logger.info('loading global model from file {}'.format(conf['startCheckPoint']))
@@ -145,7 +149,7 @@ class FLTrainer:
         # load globalModel from checkpoint ..
         # accumulator for fed avg
         self.accMdl  = getModelTrainer(self.conf)
-        self.lrFactor = 0.99
+        self.lrFactor = 0.998
         
     def getEpochLr(self,lr,epoch):
         #if(epoch>1 and epoch%50==0):
@@ -162,7 +166,7 @@ class FLTrainer:
         
         pfx = 'FL Epoch: {}'.format(flEpoch)
         
-        attack = self.attackFreq is not None and (flEpoch-1)%self.attackFreq==0
+        attack = self.attackFreq is not None and (flEpoch-self.attackFromEpoch)%self.attackFreq==0 and flEpoch>= self.attackFromEpoch
         
         attack = self.attack and attack
 

@@ -20,8 +20,11 @@ import sys
 
 dataDir = '../../data/sentiment-140/'
 
+#fractionOfTrain = float(sys.argv[1])
+#th = int(sys.argv[2])
 fractionOfTrain = 1.0
 th = 40
+
 seq_length = 100
         
 def pad_features(tweet_ints, seq_length):
@@ -80,10 +83,15 @@ trainp = 0
 trainn = 0
 u = 0
 train_tweets_uid = []
+gt = 0
 for k in dictUsersTweetsFiltered:
     for r in dictUsersTweetsFiltered[k]:
         
         tweet = clean_tweet(r[5])
+        if('greek' in tweet):
+            gt+=1
+            continue
+            
         label = r[0]
         if(label==4):
             label = 1
@@ -103,6 +111,7 @@ for k in dictUsersTweetsFiltered:
         
         j+=1
     u+=1
+print('total tweets with greek ',gt)
 
 print('Total users in train, ',u)
 user_lens = [len(dictUsersTweetsFiltered[k]) for k in dictUsersTweetsFiltered.keys() ]
@@ -112,7 +121,7 @@ print('{} positive and {} negative in train'.format(trainp,trainn))
 
 sys.stdout.flush()
 
-pickle.dump(trainTweets,open(dataDir+'clean_train_tweets_{}.pkl'.format(fractionOfTrain),'wb'))
+pickle.dump(trainTweets,open(dataDir+'clean_train_tweets_{}_{}.pkl'.format(fractionOfTrain,th),'wb'))
 
 print(len(allTweets),j)
 for i,r in dfTest.iterrows():
@@ -230,8 +239,8 @@ np.savetxt(X=Y_train.astype(int),fname=dataDir+'sent140_{}_{}_trainY.np'.format(
 np.savetxt(X=np.array(train_tweets_uid).astype(int),fname=dataDir+'sent140_{}_{}_train_uid.np'.format(fractionOfTrain,th),
            fmt='%i',delimiter=',')
 
-np.savetxt(X=X_test.astype(int),fname=dataDir+'sent140_testX.np', fmt='%i', delimiter=",")
-np.savetxt(X=Y_test.astype(int),fname=dataDir+'sent140_testY.np', fmt='%i', delimiter=",")
+np.savetxt(X=X_test.astype(int),fname=dataDir+'sent140_{}_{}_testX.np'.format(fractionOfTrain,th), fmt='%i', delimiter=",")
+np.savetxt(X=Y_test.astype(int),fname=dataDir+'sent140_{}_{}_testY.np'.format(fractionOfTrain,th), fmt='%i', delimiter=",")
 
 
 

@@ -60,21 +60,29 @@ class TwitterSentiment140Data:
         
         fractionOfTrain = float(conf['fractionOfTrain'])
         th = conf['th']
+        bs = conf['normalTrainConfig']['batchSize']
         
-        partitionType = conf['partitioning']
-        totalUsers    = conf['totalUsers']
+        if('partitioning' in conf):
+            partitionType = conf['partitioning']
+        else:
+            partitionType = ''
+ 
         
         # read data from text files
         X_train = np.loadtxt(fname=self.dataDir+'sent140_{}_{}_trainX.np'.format(fractionOfTrain,th), delimiter=",").astype(int)
         Y_train = np.loadtxt(fname=self.dataDir+'sent140_{}_{}_trainY.np'.format(fractionOfTrain,th), delimiter=",").astype(int)
+        n = len(X_train)
+        n = n - n%bs
         
-        self.X_train = X_train
-        self.Y_train = Y_train
+        self.X_train = X_train[:n]
+        self.Y_train = Y_train[:n]
         print(X_train.shape,Y_train.shape)
-        X_test  = np.loadtxt(fname=self.dataDir+'sent140_testX.np', delimiter=",").astype(int)
-        Y_test  = np.loadtxt(fname=self.dataDir+'sent140_testY.np', delimiter=",").astype(int)
+        
+        X_test  = np.loadtxt(fname=self.dataDir+'sent140_{}_{}_testX.np'.format(fractionOfTrain,th), delimiter=",").astype(int)
+        Y_test  = np.loadtxt(fname=self.dataDir+'sent140_{}_{}_testY.np'.format(fractionOfTrain,th), delimiter=",").astype(int)
         
         if(partitionType == 'iid'):
+            totalUsers    = conf['totalUsers']
             print('will do iid parts')
             #ensureSamplesPerUser = 200
             samplesPerUser= 200
@@ -97,7 +105,7 @@ class TwitterSentiment140Data:
             
             
         elif(partitionType == 'natural'):
-            
+            totalUsers    = conf['totalUsers']
             print('doing natural partitioning')
             self.userIdx = np.loadtxt(fname=self.dataDir+'sent140_{}_{}_train_uid.np'
                              .format(fractionOfTrain,th), delimiter=",").astype(int)
@@ -115,15 +123,16 @@ class TwitterSentiment140Data:
                     X_train_res = np.vstack((X_train_res,x))
                     Y_train_res = np.concatenate((Y_train_res,y))
                     
-        print('reserved samples for adv',len(X_train_res))
+            print('reserved samples for adv',len(X_train_res))
                 
         if(not backdoor is None):
             print('building backdoor data, ',backdoor)
             
             backdoorDir = self.dataDir + backdoor +'/'
-            self.vocab = pickle.load(open(backdoorDir+'vocabFull.pkl', 'rb'))
-            Xb_train   = np.loadtxt(fname = backdoorDir + 'b_trainX.np', delimiter=",").astype(int)
-            backdoorTestPath =  backdoorDir + 'b_testX.np'
+            self.vocab = pickle.load(open(backdoorDir+'vocabFull_{}_{}.pkl'.format(fractionOfTrain,th), 'rb'))
+            Xb_train   = np.loadtxt(fname = backdoorDir +
+                                    'b_trainX_{}_{}.np'.format(fractionOfTrain,th), delimiter=",").astype(int)
+            backdoorTestPath =  backdoorDir + 'b_testX_{}_{}.np'.format(fractionOfTrain,th)
             
             if(os.path.exists(backdoorTestPath)):
                 Xb_test    = np.loadtxt(fname =backdoorTestPath, delimiter= ",").astype(int)
@@ -160,12 +169,12 @@ class TwitterSentiment140Data:
             self.vocab = pickle.load(open(self.dataDir+'vocabGood_{}_{}.pkl'.format(fractionOfTrain,th), 'rb'))
         
         print('total test ',len(X_test))
-        m = len(X_test)-len(X_test)%340
-        X_test = X_test[:m]
-        Y_test = Y_test[:m]
+        m = len(X_test)-len(X_test)%bs
+        self.X_test = X_test[:m]
+        self.Y_test = Y_test[:m]
         print(X_train.shape,Y_train.shape)
-        self.trainData = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(Y_train))
-        self.testData = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(Y_test))
+        self.trainData = TensorDataset(torch.from_numpy(self.X_train), torch.from_numpy(self.Y_train))
+        self.testData = TensorDataset(torch.from_numpy(self.X_test), torch.from_numpy(self.Y_test))
         
         self.vocabSize = len(self.vocab)
         

@@ -2,12 +2,12 @@
 name: sent140
 dataset: sent140
 text: True
-partitioning: iid
+partitioning: natural
 arch: textBC
 loss: nll
 device: cuda:0
 dataPath: "./data/sentiment-140/"
-startCheckPoint: './out/sent140-normal-trials-data-th/model_at_epoch_200.pt'
+#startCheckPoint: "./checkpoints/model_at_epoch_500_0.05_500_false.pt"
 #startCheckPoint: "./outputs/name_imdb_initLr_0.05_numFLEpochs_500/best_model.pt"
 
 modelParams:
@@ -16,7 +16,7 @@ modelParams:
   hiddenDim: 200
   outputDim: 1
   numLayers: 2
-  bidirectional: False
+  bidirectional: true
   padIdx: 0
   dropout: 0.5
   
@@ -25,7 +25,7 @@ normalTrainConfig:
   testBatchSize: 20
   method: None
   optimizer: sgd
-  initLr: 0.05
+  initLr: 0.9
   momentum: 0.9
   weightDecay: 0.0001
   internalEpochs: 2
@@ -35,7 +35,7 @@ attackerTrainConfig:
   testBatchSize: 20
   method: blackbox   # options blackbox|pgd
   optimizer: sgd
-  initLr: 0.05
+  initLr: 0.9
   momentum: 0.9
   modelReplacement: False
   weightDecay: 0.0001
@@ -44,27 +44,28 @@ attackerTrainConfig:
   internalEpochs: 2
   
   
-  
+#th: 100
+#fractionOfTrain: 1.0
+#totalUsers: 160
 
-th: 0
-fractionOfTrain: 0.25
-totalUsers: 1948
+th: 40
+fractionOfTrain: 1.0
+totalUsers: 1500
+
 
 numActiveUsersPerRound: 10
 
 numFLEpochs: 500
 
-enableCkpt: False
+enableCkpt: True
 
 ckptEpochs: [ 0, 5, 10, 50, 100, 200, 300, 400, 499, 500 ]
 
 #outputDir: $../../outputs/name_initLr_numFLEpochs_attack
-outputDir: ./out/sent140-normal-trials-greek-director-backdoor-2-160b-40g-lr-adapt/
+outputDir: ./out/sent140-normal-trials-data-th-natural-part-lr-0.9-bs-20-10w/
 
-attack: True
-backdoor: greek-director-backdoor
-attackFreq: 10
-numAdversaries: 1
-attackFromEpoch: 205
-
+attack: False
+#backdoor: hate_speech_backdoor.txt
+#attackFreq: 10
+#numAdversaries: 1
 
