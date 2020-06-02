@@ -80,8 +80,8 @@ if __name__ == "__main__":
     conf0['numFLEpochs'] = 300
     conf0['enableCkpt'] = False
     
-    op_pfx = './outputs/yorgos_backdoor_defenses'
-    lstNumEdgePtsAdv = [0 ,20, 40 ,60, 80, 100,120]
+    op_pfx = './outputs/yorgos_backdoor_'
+    lstNumEdgePtsAdv = [10, 20, 40 ,60, 80, 100,120]
     lstNumEdgePtsGood = [0, 20, 40, 60,80, 100,120]
     
     for a in lstNumEdgePtsAdv:
