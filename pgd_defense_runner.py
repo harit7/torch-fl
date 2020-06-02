@@ -73,25 +73,25 @@ if __name__ == "__main__":
     confFilePath = args.config
     conf0 = loadConfig(confFilePath)
     
-    #defenses = ['noDefense','normClipping','krum','multiKrum','rfa']
-    defenses = ['krum']
+    defenses = ['noDefense','normClipping','krum','multiKrum','rfa']
+    #defenses = ['krum']
     normBounds = {'noDefense':10, 'normClipping':1.5, 'krum':1.5,'multiKrum':1.5,'rfa':1.5}
     
     lstConf = []
     
     parBatch = 2
-    conf0['attackFromEpoch']=100
-    conf0['numFLEpochs'] = 300
+    conf0['attackFromEpoch']=101
+    conf0['numFLEpochs'] = 500
     conf0['enableCkpt'] = False
     
-    lstEpsilon = [1.25,1.0,0.9]
+    lstEpsilon = [1.5,1.0,1.25]
     
     method = conf0['attackerTrainConfig']['method']
     
     op_pfx = './outputs/yorgos_backdoor_defenses_'+method
     
-    for defense in defenses:
-        for eps in lstEpsilon:
+    for eps in lstEpsilon:
+        for defense in defenses:
             conf = copy.deepcopy(conf0)
             conf['attackerTrainConfig']['epsilon'] = eps
             conf['defenseTechnique'] = defense

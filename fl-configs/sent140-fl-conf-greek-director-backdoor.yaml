@@ -49,8 +49,8 @@ th: 0
 fractionOfTrain: 0.25
 totalUsers: 1948
 
-numEdgePtsAdv: 10
-numEdgePtsGood: 190
+numEdgePtsAdv: 60
+numEdgePtsGood: 0
 
 numActiveUsersPerRound: 10
 
@@ -67,6 +67,6 @@ attack: True
 backdoor: greek-director-backdoor
 attackFreq: 10
 numAdversaries: 1
-attackFromEpoch: 105
+attackFromEpoch: 101
 
 
