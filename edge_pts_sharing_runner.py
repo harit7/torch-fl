@@ -81,8 +81,8 @@ if __name__ == "__main__":
     conf0['enableCkpt'] = False
     
     op_pfx = './outputs/yorgos_backdoor_defenses'
-    lstNumEdgePtsAdv = [0 ,20, 40 80, 100,120]
-    lstNumEdgePtsGood = [0, 20, 40, 80, 100,120]
+    lstNumEdgePtsAdv = [0 ,20, 40 ,60, 80, 100,120]
+    lstNumEdgePtsGood = [0, 20, 40, 60,80, 100,120]
     
     for a in lstNumEdgePtsAdv:
         for b in lstNumEdgePtsGood:
@@ -95,7 +95,7 @@ if __name__ == "__main__":
             conf['outputDir'] = '{}_numEdgeAdv_{}_numEdgeGood_{}/'.format(op_pfx,a,b)
             lstConf.append(conf)
     
-    parBatch = 2    
+    parBatch = 5   
     # Execution
     if(parBatch>1):
         for i in range(len(lstConf)):

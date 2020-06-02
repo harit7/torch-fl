@@ -354,9 +354,9 @@ class FLTrainer:
     def trainNEpochs(self):
         conf = self.conf
         
-        stats = {"epoch":[],"globalModelAcc":[],"allNDBS":[],"aNDBS":[],"aNDAS":[]} 
+        stats = {"fl_iter":[],"main_task_acc":[],"allNDBS":[],"adv_norm_diff_bs":[],"adv_norm_diff":[]} 
         if(self.backdoor):
-            stats['globalModelBackdoorAcc'] = []
+            stats['backdoor_acc'] = []
         logger = self.logger
         bestAcc = 0
         
@@ -376,7 +376,7 @@ class FLTrainer:
             testLoss, testAcc = self.globalModel.validateModel()
             if(self.backdoor):
                 l2,accOnBackdoorTestData = self.globalModel.validateModel(dataLoader=self.backdoorTestLoader)
-                stats['globalModelBackdoorAcc'].append(accOnBackdoorTestData)
+                stats['backdoor_acc'].append(accOnBackdoorTestData)
             
             if(conf['enableCkpt']):
                 if(testAcc > bestAcc):
@@ -399,11 +399,11 @@ class FLTrainer:
             
             
             
-            stats['epoch'].append(epoch)
-            stats['globalModelAcc'].append(testAcc)
+            stats['fl_iter'].append(epoch)
+            stats['main_task_acc'].append(testAcc)
             stats['allNDBS'].append(':'.join([str(nd) for nd in lstNDBS]))
-            stats['aNDBS'].append(aNDBS)
-            stats['aNDAS'].append(aNDAS)
+            stats['adv_norm_diff_bs'].append(aNDBS)
+            stats['adv_norm_diff'].append(aNDAS)
             #stats['NDAS'].append(':'.join([str(nd) for nd in lstNDAS]))
             
             #writing per epoch
