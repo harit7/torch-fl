@@ -148,8 +148,9 @@ class TwitterSentiment140Data:
             # put edge points in adversary
             numEdgePtsAdv = conf['numEdgePtsAdv']
             advPts = 200
+            Xb_all = Xb_train
             #badPts = 160  # assume we have > 100
-            Xb_train_adv = Xb_train[:numEdgePtsAdv]
+            Xb_train_adv = Xb_all[:numEdgePtsAdv]
             Yb_train_adv = Yb_train[:numEdgePtsAdv]
             
             # mix good data points 
@@ -168,10 +169,13 @@ class TwitterSentiment140Data:
             
             # put edge points in good users
             numEdgePtsGood = conf['numEdgePtsGood']
-            
-            Xb_train_good = Xb_train[numEdgePtsAdv:]
+            print('numEdgePtsGood,',numEdgePtsGood)   
+ 
+            Xb_train_good = Xb_all[numEdgePtsAdv:]
             Yb_train_good = np.ones(len(Xb_train_good)).astype(int)
-            
+            X_train = self.X_train
+            Y_train = self.Y_train
+            n = len(X_train)
             X_train = X_train[:n-numEdgePtsGood]
             Y_train = Y_train[:n-numEdgePtsGood]
             X_train = np.vstack(     (X_train, Xb_train_good[:numEdgePtsGood]))
@@ -203,7 +207,7 @@ class TwitterSentiment140Data:
         self.X_train = X_train
         self.Y_train = Y_train
         
-        print(self.X_train.shape,self.Y_train.shape)
+        print('final x train shape,',self.X_train.shape,self.Y_train.shape)
         self.trainData = TensorDataset(torch.from_numpy(self.X_train), torch.from_numpy(self.Y_train))
         self.testData = TensorDataset(torch.from_numpy(self.X_test), torch.from_numpy(self.Y_test))
         

@@ -81,19 +81,20 @@ if __name__ == "__main__":
     conf0['enableCkpt'] = False
     
     op_pfx = './outputs/yorgos_backdoor_'
-    lstNumEdgePtsAdv = [10, 20, 40 ,60, 80, 100,120]
-    lstNumEdgePtsGood = [0, 20, 40, 60,80, 100,120]
-    
-    for a in lstNumEdgePtsAdv:
-        for b in lstNumEdgePtsGood:
-            if(a==0 and b==0):
-                continue
-            conf = copy.deepcopy(conf0)
-            conf['numEdgePtsAdv'] = a
-            conf['numEdgePtsGood'] = b
+    #lstNumEdgePtsAdv = [10, 20, 40 ,60, 80, 100,120]
+    #lstNumEdgePtsGood = [0, 20, 40, 60,80, 100,120]
+    lstPairs = [(10,90),(50,50),(90,10),(20,180),(100,100),(180,20),(10,190),(40,160)]
+    for p in lstPairs:
+        a = p[0]
+        b = p[1]
 
-            conf['outputDir'] = '{}_numEdgeAdv_{}_numEdgeGood_{}/'.format(op_pfx,a,b)
-            lstConf.append(conf)
+        if(a==0 and b==0):
+            continue
+        conf = copy.deepcopy(conf0)
+        conf['numEdgePtsAdv'] = a
+        conf['numEdgePtsGood'] = b
+        conf['outputDir'] = '{}_numEdgeAdv_{}_numEdgeGood_{}/'.format(op_pfx,a,b)
+        lstConf.append(conf)
     
     parBatch = 5   
     # Execution
