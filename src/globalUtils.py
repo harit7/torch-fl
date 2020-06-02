@@ -137,7 +137,7 @@ def distModels(mdl1,mdl2,p=2):
 
 def normModel(mdl,p=2):
     v = parameters_to_vector(mdl.parameters())
-    return torch.norm(W,p=p)
+    return torch.norm(v,p=p)
 
 def constructMNISTBackdoorData(trainData):
     pass

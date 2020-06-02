@@ -200,7 +200,10 @@ class TwitterSentiment140Data:
         m = len(X_test)-len(X_test)%bs
         self.X_test = X_test[:m]
         self.Y_test = Y_test[:m]
-        print(X_train.shape,Y_train.shape)
+        self.X_train = X_train
+        self.Y_train = Y_train
+        
+        print(self.X_train.shape,self.Y_train.shape)
         self.trainData = TensorDataset(torch.from_numpy(self.X_train), torch.from_numpy(self.Y_train))
         self.testData = TensorDataset(torch.from_numpy(self.X_test), torch.from_numpy(self.Y_test))
         

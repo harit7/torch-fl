@@ -73,7 +73,8 @@ if __name__ == "__main__":
     confFilePath = args.config
     conf0 = loadConfig(confFilePath)
     
-    defenses = ['noDefense','normClipping','krum','multiKrum','rfa']
+    #defenses = ['noDefense','normClipping','krum','multiKrum','rfa']
+    defenses = ['krum']
     normBounds = {'noDefense':10, 'normClipping':1.5, 'krum':1.5,'multiKrum':1.5,'rfa':1.5}
     
     lstConf = []
@@ -83,14 +84,20 @@ if __name__ == "__main__":
     conf0['numFLEpochs'] = 300
     conf0['enableCkpt'] = False
     
-    op_pfx = './outputs/yorgos_backdoor_defenses'
+    lstEpsilon = [1.25,1.0,0.9]
+    
+    method = conf0['attackerTrainConfig']['method']
+    
+    op_pfx = './outputs/yorgos_backdoor_defenses_'+method
     
     for defense in defenses:
-        conf = copy.deepcopy(conf0)
-        conf['defenseTechnique'] = defense
-        conf['normBound'] = normBounds[defense]
-        conf['outputDir'] = op_pfx+ '_'+defense+'_'+str(normBounds[defense])+'/'
-        lstConf.append(conf)
+        for eps in lstEpsilon:
+            conf = copy.deepcopy(conf0)
+            conf['attackerTrainConfig']['epsilon'] = eps
+            conf['defenseTechnique'] = defense
+            conf['normBound'] = normBounds[defense]
+            conf['outputDir'] = '{}_{}_{}_{}/'.format(op_pfx,defense,normBounds[defense],eps)
+            lstConf.append(conf)
     if(parBatch>1):
         for i in range(len(lstConf)):
             ParallelRun(lstConf[i*parBatch:(i+1)*parBatch])

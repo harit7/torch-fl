@@ -208,6 +208,9 @@ class FLTrainer:
         # add adv data to adv users ...if any.
         #
         lstPtsCount = np.array([len(trainData) for trainData in lstWorkerData])
+        
+        totalPoints = sum(lstPtsCount)
+        
         lstFractionPts = lstPtsCount/sum(lstPtsCount)
         logger.info('{} Fraction of points on each worker in this round: {}'.format(pfx,lstFractionPts))
         logger.info('{} Num points on workers: {}'.format(pfx,lstPtsCount))
@@ -275,7 +278,7 @@ class FLTrainer:
             # Take Care of  Model Replacement
             if(isAttacker and conf['attackerTrainConfig']['modelReplacement']):
                 normBS = normModel(localModel.model)
-                localModel.scaleForReplacement(globalModel.model,totalPoints)
+                localModel.scaleForReplacement(self.globalModel.model,totalPoints)
                 normAS = normModel(localModel.model)
                 logger.info('{} Worker Norms before Scaling and After Scaling {} \t {}'.format(pfx,normBS,normAS))
                 ndAS = normDiff(self.globalModel.model,localModel.model)
