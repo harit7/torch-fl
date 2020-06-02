@@ -42,13 +42,17 @@ class FLTrainer:
             self.attack = conf['attack']
 
         self.defense_technique =  "noDefense"
+        self.noDefense = True
         if('defenseTechnique' in conf and conf['defenseTechnique'] is not None):
             self.defender = getDefender(conf)
             if(not self.defender is None):
                 self.defender.logger = logger
+        
             
             self.defense_technique = conf['defenseTechnique']
         
+        self.noDefense = self.defense_technique == 'noDefense'
+        logger.info(' noDefense: {}'.format(self.noDefense))
         print('backdoor',self.backdoor)
         
         self.normalInitLr = conf['normalTrainConfig']['initLr']
@@ -237,10 +241,7 @@ class FLTrainer:
             localModel.createDataLoaders(trainData=lstWorkerData[idx],testData=self.dataset.testData)
             # copy params from globalModel to the local model
             copyParams(self.globalModel.model,localModel.model)
-            
-            net_list.append(localModel.model)
-            
-            
+           
             
             if(isAttacker):
                 attackerConf = conf['attackerTrainConfig']
@@ -289,6 +290,13 @@ class FLTrainer:
             logger.info('--------------------------')
             #testLoss, testAcc = mdl.validateModel() 
             #print(testLoss,testAcc)
+            if(self.noDefense):
+                logger.info('Aggregated update now, as there is no defense')
+                addModelsInPlace(self.accMdl.model, localModel.model, scale2=net_freq[idx])
+
+            else:
+                logger.info('Will aggregate after defense')
+                net_list.append(localModel.model)
             
 
         if self.defense_technique == "noDefense":
@@ -331,9 +339,11 @@ class FLTrainer:
                                                     device=self.device)
         else:
             NotImplementedError("Unsupported defense method !")
-
-        for idx,net in enumerate(net_list):
-            addModelsInPlace(self.accMdl.model, net, scale2=net_freq[idx])
+            
+        if(not self.noDefense):
+            logger.info('Aggregating After Defense')
+            for idx,net in enumerate(net_list):
+                addModelsInPlace(self.accMdl.model, net, scale2=net_freq[idx])
             
             
 

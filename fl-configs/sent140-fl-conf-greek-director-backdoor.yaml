@@ -48,7 +48,7 @@ th: 0
 fractionOfTrain: 0.25
 totalUsers: 1948
 
-numEdgePtsAdv: 100
+numEdgePtsAdv: 20
 numEdgePtsGood: 0
 
 numActiveUsersPerRound: 10
@@ -60,7 +60,7 @@ enableCkpt: True
 ckptEpochs: [ 0, 5, 10, 50, 100, 200, 300, 400, 499, 500 ]
 
 #outputDir: $../../outputs/name_initLr_numFLEpochs_attack
-outputDir: ./out/sent140-normal-trials-greek-director-backdoor-2-100b-100g-140o-lr-adapt/
+outputDir: ./out/sent140-normal-trials-greek-director-backdoor-2-120b-120o-lr-adapt/
 
 attack: True
 backdoor: greek-director-backdoor

@@ -59,31 +59,7 @@ def ParallelRun(lstConf):
 def SeqRun(lstConf):
     for conf in lstConf:
         runConf(conf)
-     
-     
-'''
-def yourfunction(arg):
-    for i in range(0,100):
-        print(str(arg)+'_'+str(i))
-        time.sleep(2)
-
-if __name__ == '__main__':
-    lst = [1,2,3,4,5]
-    lstP = []
-    for l in lst:
-        p =  Process(target=yourfunction, args=(l,))
-        print('x')
-        p.start()
-        print('y')
-        lstP.append(p)
-       
-    for p in lstP:
-        p.join()
-        print('z')
     
-
-'''
-
 if __name__ == "__main__":
 
   
@@ -102,7 +78,7 @@ if __name__ == "__main__":
     
     lstConf = []
     
-    par = True
+    parBatch = 2
     conf0['attackFromEpoch']=100
     conf0['numFLEpochs'] = 300
     conf0['enableCkpt'] = False
@@ -115,8 +91,9 @@ if __name__ == "__main__":
         conf['normBound'] = normBounds[defense]
         conf['outputDir'] = op_pfx+ '_'+defense+'_'+str(normBounds[defense])+'/'
         lstConf.append(conf)
-    if(par):
-        ParallelRun(lstConf)
+    if(parBatch>1):
+        for i in range(len(lstConf)):
+            ParallelRun(lstConf[i*parBatch:(i+1)*parBatch])
     else:
         SeqRun(lstConf)
         
