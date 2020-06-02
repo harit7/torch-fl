@@ -7,6 +7,7 @@ arch: textBC
 loss: nll
 device: cuda:0
 dataPath: "./data/sentiment-140/"
+startCheckPoint: './outputs/sent140-normal-fl-th0_fr0.25_u1948_lr_0.05-yorogs-vocab/model_at_epoch_100.pt'
 #startCheckPoint: './out/sent140-normal-trials-data-th/model_at_epoch_200.pt'
 #startCheckPoint: "./outputs/name_imdb_initLr_0.05_numFLEpochs_500/best_model.pt"
 
@@ -55,17 +56,17 @@ numActiveUsersPerRound: 10
 
 numFLEpochs: 500
 
-enableCkpt: True
+enableCkpt: False
 
 ckptEpochs: [ 0, 5, 10, 50, 100, 200, 300, 400, 499, 500 ]
 
 #outputDir: $../../outputs/name_initLr_numFLEpochs_attack
-outputDir: ./out/sent140-normal-trials-greek-director-backdoor-2-120b-120o-lr-adapt/
+outputDir: ./out/sent140-greek-director-backdoor-2-120b-120o-lr-adapt/
 
 attack: True
 backdoor: greek-director-backdoor
 attackFreq: 10
 numAdversaries: 1
-attackFromEpoch: 205
+attackFromEpoch: 105
 
 

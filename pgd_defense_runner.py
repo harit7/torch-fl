@@ -79,13 +79,11 @@ if __name__ == "__main__":
     lstConf = []
     
     parBatch = 2
-    #conf0['attackFromEpoch']=100
-    conf0['numFLEpochs'] = 400
+    conf0['attackFromEpoch']=100
+    conf0['numFLEpochs'] = 300
     conf0['enableCkpt'] = False
-
-    method = conf0['attackerTrainConfig']['method']
-   
-    op_pfx = './outputs/yorgos_backdoor_defenses'+method
+    
+    op_pfx = './outputs/yorgos_backdoor_defenses'
     
     for defense in defenses:
         conf = copy.deepcopy(conf0)

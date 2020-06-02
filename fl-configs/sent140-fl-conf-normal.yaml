@@ -58,17 +58,21 @@ totalUsers: 1948
   
 numActiveUsersPerRound: 10
 
+numEdgePtsAdv: 60
+numEdgePtsGood: 0
+
+
 numFLEpochs: 500
 
 enableCkpt: True
 
-ckptEpochs: [ 0, 5, 10, 50, 100, 200, 300, 400, 499, 500 ]
+ckptEpochs: [ 10, 50, 100, 200, 300, 400, 500 ]
 
 #outputDir: $../../outputs/name_initLr_numFLEpochs_attack
-outputDir: ./out/sent140-normal-trials-data-th/
+outputDir: ./outputs/sent140-normal-fl-th0_fr0.25_u1948_lr_0.05-yorogs-vocab/
 
 attack: False
-#backdoor: hate_speech_backdoor.txt
-#attackFreq: 10
-#numAdversaries: 1
+backdoor: greek-director-backdoor
+attackFreq: 10
+numAdversaries: 0
 
