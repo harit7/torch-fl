@@ -1,0 +1,41 @@
+name: mnist
+seed: 42
+text: False
+device: cuda:0
+
+dataConf:
+  dataset: mnist
+  dataPath: "./data/mnist/"
+  partitioning: iid
+  numPartitions: 100
+  
+modelConf:
+  arch: lenet
+  loss: crossEntropy
+
+#startCheckPoint: "./checkpoints/model_at_epoch_500_0.05_500_false.pt"
+#startCheckPoint: "./outputs/name_imdb_initLr_0.05_numFLEpochs_500/best_model.pt"
+
+normalTrainConf:
+  batchSize: 128
+  testBatchSize: 128
+  method: None
+  optimizer: sgd
+  initLr: 0.05
+  momentum: 0.9
+  weightDecay: 0.0001
+  internalEpochs: 2
+
+flConf:
+  numActiveUsersPerRound: 10
+  totalUsers: 100
+  numFLEpochs: 501
+  enableCkpt: False
+  ckptEpochs: [ 0, 5, 10, 50, 75, 100, 150, 200, 300, 400, 499, 500 ]
+  attack: False
+
+#outputDir: $./outputs/femnist10w/name_normalTrainConfig.initLr_numFLEpochs_attack
+outputDir: ./out/mnist-trials/
+
+
+
